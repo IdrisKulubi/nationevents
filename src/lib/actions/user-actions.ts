@@ -41,6 +41,9 @@ interface CreateJobSeekerProfileData {
   conferenceSessionInterests?: string[];
   conferenceDietaryRequirements?: string;
   conferenceAccessibilityNeeds?: string;
+  // Data privacy fields
+  dataPrivacyAccepted: boolean;
+  dataPrivacyAcceptedAt: Date;
 }
 
 export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
@@ -146,6 +149,10 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
             dietaryRequirements: data.conferenceDietaryRequirements || "",
             accessibilityNeeds: data.conferenceAccessibilityNeeds || ""
           } : null,
+          // Data privacy fields
+          dataPrivacyAccepted: data.dataPrivacyAccepted,
+          dataPrivacyAcceptedAt: data.dataPrivacyAcceptedAt,
+          dataRetentionPeriod: "1_year",
           createdAt: new Date(),
           updatedAt: new Date(),
         });

@@ -93,6 +93,10 @@ export const jobSeekers = pgTable(
       accessibilityNeeds?: string;
       networkingInterests?: string[];
     }>(),
+    // Data privacy and consent tracking
+    dataPrivacyAccepted: boolean("data_privacy_accepted").default(false).notNull(),
+    dataPrivacyAcceptedAt: timestamp("data_privacy_accepted_at"),
+    dataRetentionPeriod: text("data_retention_period").default("1_year"), // Default retention period
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -106,6 +110,7 @@ export const jobSeekers = pgTable(
     huaweiStudentIdIdx: index("job_seeker_huawei_student_id_idx").on(table.huaweiStudentId),
     conferenceAttendanceIdx: index("job_seeker_conference_attendance_idx").on(table.wantsToAttendConference),
     conferenceStatusIdx: index("job_seeker_conference_status_idx").on(table.conferenceAttendanceStatus),
+    dataPrivacyIdx: index("job_seeker_data_privacy_idx").on(table.dataPrivacyAccepted),
   })
 );
 

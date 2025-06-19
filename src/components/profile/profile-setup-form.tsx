@@ -12,11 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, User, Briefcase, GraduationCap, Clock, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { AlertCircle, User, Briefcase, GraduationCap, Clock, CheckCircle, ArrowRight, ArrowLeft, Shield, FileText } from "lucide-react";
 import { createJobSeekerProfile } from "@/lib/actions/user-actions";
 import { toast } from "sonner";
 import { CVUploadField } from "./cv-upload-field";
 import { AdditionalDocumentsUpload } from "./additional-documents-upload";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Job sectors/categories from employer side
 const JOB_SECTORS = [
@@ -67,7 +68,6 @@ const HUAWEI_CERTIFICATION_LEVELS = [
   "HCIA",
   "HCIP", 
   "HCIE",
-  "other"
 ];
 
 const profileSchema = z.object({
@@ -92,6 +92,10 @@ const profileSchema = z.object({
   conferenceSessionInterests: z.array(z.string()).optional(),
   conferenceDietaryRequirements: z.string().optional(),
   conferenceAccessibilityNeeds: z.string().optional(),
+  // Data privacy acceptance
+  dataPrivacyAccepted: z.boolean().refine(val => val === true, {
+    message: "You must accept the data privacy policy to continue"
+  }),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -122,6 +126,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
   const [cvUploadUrl, setCvUploadUrl] = useState<string>("");
   const [additionalDocuments, setAdditionalDocuments] = useState<AdditionalDocument[]>([]);
   const [conferenceSessionInterests, setConferenceSessionInterests] = useState<string[]>([]);
+  const [dataPrivacyAccepted, setDataPrivacyAccepted] = useState(false);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -142,6 +147,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
       isHuaweiStudent: false,
       wantsToAttendConference: false,
       conferenceSessionInterests: [],
+      dataPrivacyAccepted: false,
     },
     mode: "onChange"
   });
@@ -170,7 +176,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
         break;
       case 4:
         // Step 4 has required fields but they're handled by conditional validation
-        fieldsToValidate = ["availableFrom"];
+        fieldsToValidate = ["availableFrom", "dataPrivacyAccepted"];
         break;
     }
     
@@ -179,6 +185,12 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
     // Additional validation for step 3 - ensure CV is uploaded
     if (currentStep === 3 && !cvUploadUrl) {
       toast.error("Please upload your CV before proceeding to the next step");
+      return;
+    }
+    
+    // Additional validation for step 4 - ensure data privacy is accepted
+    if (currentStep === 4 && !dataPrivacyAccepted) {
+      toast.error("Please accept the data privacy policy to complete your profile");
       return;
     }
     
@@ -254,6 +266,8 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
         conferenceSessionInterests: conferenceSessionInterests,
         conferenceDietaryRequirements: formValues.conferenceDietaryRequirements || "",
         conferenceAccessibilityNeeds: formValues.conferenceAccessibilityNeeds || "",
+        dataPrivacyAccepted: formValues.dataPrivacyAccepted,
+        dataPrivacyAcceptedAt: new Date(),
       };
 
       // Debug: Log the data being sent
@@ -679,25 +693,9 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="conferenceDietaryRequirements" className="text-slate-700 dark:text-slate-300 font-medium">Conference Dietary Requirements (Optional)</Label>
-                    <Textarea
-                      id="conferenceDietaryRequirements"
-                      {...register("conferenceDietaryRequirements")}
-                      placeholder="e.g., Vegetarian, Halal, No nuts, etc. Leave blank if none"
-                      className="mt-1 min-h-[80px] bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20 transition-all duration-200 resize-none"
-                    />
-                  </div>
+                 
 
-                  <div className="space-y-2">
-                    <Label htmlFor="conferenceAccessibilityNeeds" className="text-slate-700 dark:text-slate-300 font-medium">Conference Accessibility Needs (Optional)</Label>
-                    <Textarea
-                      id="conferenceAccessibilityNeeds"
-                      {...register("conferenceAccessibilityNeeds")}
-                      placeholder="e.g., Wheelchair access, Sign language interpreter, etc. Leave blank if none"
-                      className="mt-1 min-h-[80px] bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20 transition-all duration-200 resize-none"
-                    />
-                  </div>
+                 
                 </>
               )}
 
@@ -760,6 +758,75 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
                       placeholder="https://your-portfolio-website.com"
                       className="mt-1 h-12 bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20 transition-all duration-200"
                     />
+                  </div>
+                </div>
+
+                {/* Data Privacy Section */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-xl border border-blue-200/50 dark:border-blue-800/30">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                          Data Privacy & Consent
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          Please review and accept our data privacy policy
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/70 dark:bg-slate-800/70 p-4 rounded-lg border border-blue-200/30 dark:border-blue-700/30">
+                      <div className="flex items-start gap-2">
+                        <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-slate-700 dark:text-slate-300 space-y-2">
+                          <p className="font-medium">Data Collection & Retention Policy:</p>
+                          <ul className="space-y-1 ml-4 list-disc text-xs">
+                            <li>We collect your personal and professional information to facilitate job matching and interview coordination</li>
+                            <li>Your data will be shared with participating employers and event organizers for recruitment purposes</li>
+                            <li>All data will be securely stored and retained for <strong>1 (one) year</strong> from the date of collection</li>
+                            <li>After 1 year, your data will be permanently deleted from our systems unless you explicitly request otherwise</li>
+                            <li>You have the right to request access, correction, or deletion of your data at any time</li>
+                            <li>Your CV and documents will be accessible to employers during the job fair and matching process</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-blue-200/30 dark:border-blue-700/30">
+                      <Checkbox
+                        id="dataPrivacyAccepted"
+                        checked={dataPrivacyAccepted}
+                        onCheckedChange={(checked) => {
+                          const isChecked = checked === true;
+                          setDataPrivacyAccepted(isChecked);
+                          setValue("dataPrivacyAccepted", isChecked);
+                        }}
+                        className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      />
+                      <div className="space-y-1">
+                        <Label 
+                          htmlFor="dataPrivacyAccepted" 
+                          className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer leading-relaxed"
+                        >
+                          I acknowledge and accept the data privacy policy outlined above *
+                        </Label>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          By checking this box, you consent to the collection, processing, and storage of your personal data for recruitment purposes for a period of 1 year.
+                        </p>
+                      </div>
+                    </div>
+
+                    {errors.dataPrivacyAccepted && (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                          {errors.dataPrivacyAccepted.message}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -884,25 +951,42 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
-            <form onSubmit={handleFormSubmit}>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !cvUploadUrl}
-                className="px-8 py-3 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Creating Profile...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Complete Profile
-                  </>
-                )}
-              </Button>
-            </form>
+            <div className="space-y-2">
+              <form onSubmit={handleFormSubmit}>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !cvUploadUrl || !dataPrivacyAccepted}
+                  className="px-8 py-3 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Creating Profile...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Complete Profile
+                    </>
+                  )}
+                </Button>
+              </form>
+              
+              {/* Helper text for disabled button */}
+              {(!cvUploadUrl || !dataPrivacyAccepted) && !isSubmitting && (
+                <div className="text-center">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center justify-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    {!cvUploadUrl && !dataPrivacyAccepted 
+                      ? "Please upload your CV and accept the data privacy policy to continue"
+                      : !cvUploadUrl 
+                      ? "Please upload your CV to continue"
+                      : "Please accept the data privacy policy to continue"
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
