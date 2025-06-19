@@ -26,7 +26,7 @@ export default async function ProfileSetupPage() {
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-4 mb-6">
               <Image
-                src="/huaweilogo.png"
+                src="/huawei-logo.png"
                 alt="Huawei"
                 className="h-10 object-contain"
                 width={100}

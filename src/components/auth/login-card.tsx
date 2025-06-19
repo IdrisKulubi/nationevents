@@ -27,7 +27,7 @@ export function LoginCard() {
             {/* Logos */}
             <div className="flex items-center justify-center gap-4 mb-6">
               <Image
-                src="/huaweilogo.png"
+                src="/huawei-logo.png"
                 alt="Huawei"
                 width={100}
                 height={40}

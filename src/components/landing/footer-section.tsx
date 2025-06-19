@@ -48,10 +48,10 @@ export function FooterSection() {
               {/* Huawei Logo */}
               <div className="flex items-center gap-4">
                 <Image
-                  src="/huaweilogo.png"
+                  src="/huawei-logo.png"
                   alt="Huawei"
-                  width={120}
-                  height={48}
+                  width={100}
+                  height={40}
                   className="object-contain"
                 />
               </div>
@@ -66,8 +66,8 @@ export function FooterSection() {
                 <Image
                   src="/nationlogo.png"
                   alt="Nation Media Group"
-                  width={100}
-                  height={40}
+                  width={250}
+                  height={70}
                   className="object-contain"
                 />
               </div>
