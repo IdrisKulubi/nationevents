@@ -1,0 +1,38 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - '# Execute Amplify CLI with the helper script'
+        - amplifyPush --simple
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Setting up Node.js environment..."
+        - nvm install 20.10.0
+        - nvm use 20.10.0
+        - node --version
+        - npm --version
+        - echo "Cleaning up previous installs..."
+        - rm -rf node_modules package-lock.json
+        - echo "Installing dependencies..."
+        - npm install --legacy-peer-deps
+        - echo "Verifying critical dependencies..."
+        - npm list @upstash/redis || npm install @upstash/redis
+        - echo "Environment setup complete"
+    build:
+      commands:
+        - echo "Building the app..."
+        - npm run build
+    postBuild:
+      commands:
+        - echo "Post-build cleanup..."
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/* 
