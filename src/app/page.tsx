@@ -2,6 +2,7 @@ import { Navigation } from "@/components/landing/navigation";
 import { HeroSection } from "@/components/landing/hero-section";
 import { ConferenceSection } from "@/components/landing/conference-section";
 import { TimelineSection } from "@/components/landing/timeline-section";
+import { SeeYouSoon } from "@/components/landing/see-you-soon";
 import { FooterSection } from "@/components/landing/footer-section";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
             <HeroSection />
             <ConferenceSection />
             <TimelineSection />
+            <SeeYouSoon />
             <FooterSection />
         </main>
     );

@@ -17,12 +17,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 const quickLinks = [
-  { name: "Event Registration", href: "/register" },
+  { name: "Event Registration", href: "/login" },
   { name: "Employer Portal", href: "/employer" },
-  { name: "Job Seeker Guide", href: "/guide" },
-  { name: "Schedule", href: "/schedule" },
-  { name: "FAQ", href: "/faq" },
-  { name: "Contact", href: "/contact" }
+  { name: "Schedule", href: "/" },
+  { name: "Contact", href: "/" }
 ];
 
 const socialLinks = [
@@ -125,12 +123,7 @@ export function FooterSection() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-[var(--nation-blue)] flex-shrink-0" />
-                <div className="text-sm text-slate-300">
-                  <p>+254 700 123 456</p>
-                </div>
-              </div>
+            
               
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-[var(--huawei-red)] flex-shrink-0" />
@@ -203,13 +196,13 @@ export function FooterSection() {
               <p>&copy; 2025 Nation-Huawei Leap Job Fair. All rights reserved.</p>
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-400">
-              <Link href="/privacy" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/support" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 Support
               </Link>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
+import { Spotlight } from "@/components/ui/spotlight";
 import { ArrowRight, Calendar, MapPin, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,6 +16,12 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Spotlight Effect */}
+      <Spotlight
+        className="-top-40 left-0 md:-top-20 md:left-60"
+        fill="white"
+      />
+      
       {/* Animated Background Elements */}
       <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-3xl animate-pulse opacity-20"></div>
       <div className="absolute bottom-32 right-16 w-40 h-40 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full blur-3xl animate-pulse opacity-15" style={{ animationDelay: '2s' }}></div>
@@ -114,8 +121,8 @@ export function HeroSection() {
                 <p className="text-sm text-gray-300">Opportunities</p>
               </div>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">1</p>
-                <p className="text-sm text-gray-300">Day</p>
+                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">2</p>
+                <p className="text-sm text-gray-300">Days</p>
               </div>
             </div>
           </div>
