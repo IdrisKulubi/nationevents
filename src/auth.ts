@@ -51,6 +51,14 @@ export const {
     error: "/error",
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      // Default redirect to dashboard
+      return `${baseUrl}/dashboard`;
+    },
     async jwt({ token, account, user, trigger }) {
       if (account) {
         token.provider = account.provider;

@@ -142,14 +142,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check if user needs to complete profile setup
-    // Skip profile setup check for auth routes and profile setup page itself
-    if (!pathname.startsWith('/profile-setup') && 
-        !pathname.startsWith('/api/') && 
-        session.user && 
-        !session.user.profileCompleted) {
-      return NextResponse.redirect(new URL('/profile-setup', request.url));
-    }
+    // Profile completion checks are handled by individual pages
+    // This avoids issues with cached session data not reflecting latest profile status
 
     // Role-based access control
     const userRole = session.user.role;

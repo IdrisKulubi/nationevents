@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { CVUploadField } from "./cv-upload-field";
 import { AdditionalDocumentsUpload } from "./additional-documents-upload";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRouter } from "next/navigation";
 
 // Job sectors/categories from employer side
 const JOB_SECTORS = [
@@ -29,13 +30,13 @@ const JOB_SECTORS = [
   "Cloud Computing",
   "AI & Machine Learning",
   "Marketing & Sales",
-  "Business Development",
+  "Admin & Translator",
   "Project Management",
   "Human Resources",
   "Finance & Accounting",
   "Operations",
   "Customer Service",
-  "Research & Development",
+  "Civil Engineering",
   "Quality Assurance",
   "Manufacturing",
   "Logistics & Supply Chain",
@@ -77,14 +78,13 @@ const profileSchema = z.object({
   jobSectors: z.array(z.string()).min(1, "Please select at least one job sector"),
   educationLevel: z.string().min(1, "Please select your education level"),
   experienceLevel: z.string().min(1, "Please select your experience level"),
-  skills: z.string().min(10, "Please enter your key skills"),
+  skills: z.string().optional(),
   linkedinUrl: z.string().url("Please enter a valid LinkedIn URL").optional().or(z.literal("")),
   portfolioUrl: z.string().url("Please enter a valid portfolio URL").optional().or(z.literal("")),
   expectedSalary: z.string().optional(),
   availableFrom: z.string().min(1, "Please select when you're available to start"),
   // Huawei student fields
   isHuaweiStudent: z.boolean(),
-  huaweiStudentId: z.string().optional(),
   huaweiCertificationLevel: z.string().optional(),
   huaweiCertificationDetails: z.string().optional(),
   // Conference fields
@@ -119,6 +119,7 @@ interface AdditionalDocument {
 }
 
 export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
@@ -172,7 +173,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
         fieldsToValidate = ["bio", "jobSectors"];
         break;
       case 3:
-        fieldsToValidate = ["educationLevel", "experienceLevel", "skills"];
+        fieldsToValidate = ["educationLevel", "experienceLevel"];
         break;
       case 4:
         // Step 4 has required fields but they're handled by conditional validation
@@ -239,7 +240,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
     setIsSubmitting(true);
     
     try {
-      const skillsArray = formValues.skills.split(",").map(skill => skill.trim()).filter(Boolean);
+      const skillsArray = formValues.skills?.split(",").map(skill => skill.trim()).filter(Boolean) || [];
       
       const profileData = {
         userId: user.id!,
@@ -259,7 +260,6 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
         additionalDocuments: additionalDocuments,
         jobSectors: selectedSectors,
         isHuaweiStudent: formValues.isHuaweiStudent || false,
-        huaweiStudentId: formValues.huaweiStudentId || "",
         huaweiCertificationLevel: formValues.huaweiCertificationLevel || "",
         huaweiCertificationDetails: formValues.huaweiCertificationDetails || "",
         wantsToAttendConference: formValues.wantsToAttendConference || false,
@@ -282,8 +282,9 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
       
       toast.success("Registration completed! Our team will review your application and match you with suitable companies. You'll receive notifications with your interview schedule and booth assignment details for the Nation-Huawei Leap Job Fair.");
       
-      // Redirect to dashboard or success page
-      window.location.href = "/dashboard";
+      // Use router.push with refresh to ensure fresh database check
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
       console.error("Profile creation error:", error);
       toast.error("Failed to create profile. Please try again.");
@@ -482,7 +483,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="skills" className="text-slate-700 dark:text-slate-300 font-medium">Your Top Skills *</Label>
+                <Label htmlFor="skills" className="text-slate-700 dark:text-slate-300 font-medium">Your Top Skills (Optional)</Label>
                 <Input
                   id="skills"
                   {...register("skills")}
@@ -548,14 +549,14 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
               <CardTitle>
                 <div className="flex items-center gap-3">
                   <User className="w-6 h-6 text-pink-600" />
-                  <h3 className="text-xl font-semibold">Step 4: Huawei Student and Conference</h3>
+                  <h3 className="text-xl font-semibold">Step 4: Huawei ICT Academy and Conference</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 font-normal">Share your Huawei student and conference information</p>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="isHuaweiStudent" className="text-slate-700 dark:text-slate-300 font-medium">Are you a Huawei student? *</Label>
+                <Label htmlFor="isHuaweiStudent" className="text-slate-700 dark:text-slate-300 font-medium">Did you join the Huawei ICT Academy? *</Label>
                 <Select onValueChange={(value) => setValue("isHuaweiStudent", value === "true")}>
                   <SelectTrigger className="mt-1 h-12 bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20">
                     <SelectValue placeholder="Select your status" />
@@ -576,23 +577,7 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
               {watch("isHuaweiStudent") && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="huaweiStudentId" className="text-slate-700 dark:text-slate-300 font-medium">Huawei Student ID *</Label>
-                    <Input
-                      id="huaweiStudentId"
-                      {...register("huaweiStudentId")}
-                      placeholder="e.g., 12345678"
-                      className="mt-1 h-12 bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20 transition-all duration-200"
-                    />
-                    {errors.huaweiStudentId && (
-                      <p className="text-red-500 text-sm mt-2 flex items-center gap-2 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.huaweiStudentId.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="huaweiCertificationLevel" className="text-slate-700 dark:text-slate-300 font-medium">Huawei Certification Level *</Label>
+                    <Label htmlFor="huaweiCertificationLevel" className="text-slate-700 dark:text-slate-300 font-medium">Huawei Certification Level (Optional)</Label>
                     <Select onValueChange={(value) => setValue("huaweiCertificationLevel", value)}>
                       <SelectTrigger className="mt-1 h-12 bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-600 focus:border-pink-500 focus:ring-pink-500/20">
                         <SelectValue placeholder="Select your certification level" />

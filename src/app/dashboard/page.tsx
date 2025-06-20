@@ -146,7 +146,7 @@ export default async function DashboardPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-slate-800 dark:text-slate-200">50+ Companies</p>
-                      <p className="text-sm text-purple-600 dark:text-purple-400">200+ Job Positions</p>
+                      <p className="text-sm text-purple-600 dark:text-purple-400">100+ Job Positions</p>
                     </div>
                   </div>
                 </div>

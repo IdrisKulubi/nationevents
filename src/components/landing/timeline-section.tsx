@@ -136,7 +136,7 @@ const day2Events: TimelineEvent[] = [
     icon: Presentation,
     type: "special",
     location: "Workshop Rooms",
-    capacity: "200+ attendees",
+    capacity: "100+ attendees",
     featured: true,
   },
   {

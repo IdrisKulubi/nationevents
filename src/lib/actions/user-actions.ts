@@ -33,7 +33,6 @@ interface CreateJobSeekerProfileData {
   }>;
   // Huawei student fields
   isHuaweiStudent?: boolean;
-  huaweiStudentId?: string;
   huaweiCertificationLevel?: string;
   huaweiCertificationDetails?: string;
   // Conference fields
@@ -136,7 +135,7 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
           pinExpiresAt: pinExpirationTime,
           // Huawei student fields
           isHuaweiStudent: data.isHuaweiStudent || false,
-          huaweiStudentId: data.huaweiStudentId || null,
+          huaweiStudentId: null, // No longer collecting student ID
           huaweiCertificationLevel: data.huaweiCertificationLevel || null,
           huaweiCertificationDetails: data.huaweiCertificationDetails ? 
             [{ details: data.huaweiCertificationDetails, addedAt: new Date().toISOString() }] : null,

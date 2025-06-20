@@ -122,7 +122,7 @@ export function LoginCard() {
                 <p className="text-xs text-slate-600 dark:text-slate-400">Companies</p>
               </div>
               <div>
-                <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">200+</p>
+                <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">100+</p>
                 <p className="text-xs text-slate-600 dark:text-slate-400">Positions</p>
               </div>
               <div>

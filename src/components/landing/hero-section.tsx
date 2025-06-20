@@ -80,7 +80,7 @@ export function HeroSection() {
                 <Users className="w-5 h-5 text-purple-400" />
                 <div>
                   <p className="text-sm font-medium text-white">Time</p>
-                  <p className="text-xs text-gray-300">9am - 4pm Daily</p>
+                  <p className="text-xs text-gray-300">9am - 5pm Daily</p>
                 </div>
               </div>
             </div>
@@ -117,12 +117,12 @@ export function HeroSection() {
                 <p className="text-sm text-gray-300">Companies</p>
               </div>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">500+</p>
+                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">100+</p>
                 <p className="text-sm text-gray-300">Opportunities</p>
               </div>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">2</p>
-                <p className="text-sm text-gray-300">Days</p>
+                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">1</p>
+                <p className="text-sm text-gray-300">Day</p>
               </div>
             </div>
           </div>
