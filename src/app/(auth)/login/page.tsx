@@ -5,7 +5,7 @@ import { LoginCard } from "@/components/auth/login-card"
 export default async function LoginPage() {
   const session = await auth();
   if (session) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return (

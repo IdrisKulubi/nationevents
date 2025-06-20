@@ -54,6 +54,7 @@ async function applyRateLimit(
 const publicRoutes = [
   '/',
   '/login',
+  '/profile-setup',
   '/no-access',
   '/api/auth',
   '/api/sentry-example-api',
@@ -139,6 +140,15 @@ export async function middleware(request: NextRequest) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
+    }
+
+    // Check if user needs to complete profile setup
+    // Skip profile setup check for auth routes and profile setup page itself
+    if (!pathname.startsWith('/profile-setup') && 
+        !pathname.startsWith('/api/') && 
+        session.user && 
+        !session.user.profileCompleted) {
+      return NextResponse.redirect(new URL('/profile-setup', request.url));
     }
 
     // Role-based access control

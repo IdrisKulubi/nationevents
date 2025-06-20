@@ -79,7 +79,7 @@ export function LoginCard() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              signIn("google", { callbackUrl: "/" });
+              signIn("google", { callbackUrl: "/dashboard" });
             }}
             className="space-y-4"
           >
