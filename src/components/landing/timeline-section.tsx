@@ -33,7 +33,7 @@ interface TimelineEvent {
   featured?: boolean
 }
 
-const day1Events: TimelineEvent[] = [
+const eventSchedule: TimelineEvent[] = [
   {
     time: "08:30 - 09:00",
     title: "Registration & Welcome",
@@ -101,66 +101,8 @@ const day1Events: TimelineEvent[] = [
   },
   {
     time: "16:00 - 16:30",
-    title: "Day 1 Wrap-up & Awards",
-    description: "Feedback collection, day 2 preview, and recognition of outstanding participants",
-    icon: Award,
-    type: "special",
-    location: "Main Stage",
-    capacity: "All attendees",
-  },
-]
-
-const day2Events: TimelineEvent[] = [
-  {
-    time: "08:30 - 09:00",
-    title: "Day 2 Welcome",
-    description: "Quick check-in, day 2 orientation, and morning energizer activities",
-    icon: Users,
-    type: "main",
-    location: "Main Entrance",
-    capacity: "800+ attendees",
-  },
-  {
-    time: "09:00 - 12:00",
-    title: "Final Booth Sessions",
-    description: "Last chance to visit innovative booths and connect with employers for final interviews",
-    icon: Building2,
-    type: "main",
-    location: "Exhibition Area",
-    capacity: "All attendees",
-  },
-  {
-    time: "10:00 - 12:00",
-    title: "Skills Development Workshops",
-    description: "Hands-on workshops covering in-demand skills, interview techniques, and career advancement",
-    icon: Presentation,
-    type: "special",
-    location: "Workshop Rooms",
-    capacity: "100+ attendees",
-    featured: true,
-  },
-  {
-    time: "12:00 - 13:00",
-    title: "Final Networking Lunch",
-    description: "Last networking opportunity with refreshments, connections, and career guidance",
-    icon: MessageCircle,
-    type: "networking",
-    location: "Networking Zone",
-    capacity: "All attendees",
-  },
-  {
-    time: "13:00 - 15:30",
-    title: "Career Development Sessions",
-    description: "One-on-one career counseling, portfolio reviews, and professional development opportunities",
-    icon: Users,
-    type: "main",
-    location: "Counseling Rooms",
-    capacity: "400+ attendees",
-  },
-  {
-    time: "15:30 - 16:00",
-    title: "Closing Ceremony & Future Opportunities",
-    description: "Event conclusion, success stories, awards ceremony, and announcement of future opportunities",
+    title: "Closing Ceremony & Awards",
+    description: "Feedback collection, networking wrap-up, and recognition of outstanding participants",
     icon: Award,
     type: "special",
     location: "Main Stage",
@@ -198,7 +140,6 @@ const typeStyles = {
 
 export function TimelineSection() {
   const [isVisible, setIsVisible] = useState(false)
-  const [activeDay, setActiveDay] = useState<1 | 2>(1)
   const [hoveredEvent, setHoveredEvent] = useState<number | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -218,8 +159,6 @@ export function TimelineSection() {
 
     return () => observer.disconnect()
   }, [])
-
-  const currentEvents = activeDay === 1 ? day1Events : day2Events
 
   return (
     <section
@@ -263,7 +202,7 @@ export function TimelineSection() {
 
             <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">
               <span className="bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-                Two Days of
+                One Day of
               </span>
               <br />
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -273,14 +212,18 @@ export function TimelineSection() {
 
             <p className="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8">
               A meticulously crafted schedule designed to maximize networking opportunities, skill development, and
-              career advancement for all participants.
+              career advancement for all participants in one power-packed day.
             </p>
 
             {/* Quick Stats */}
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <Calendar className="w-4 h-4 text-purple-400" />
-                <span className="font-medium">2 Full Days</span>
+                <span className="font-medium">June 26, 2025</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+                <Clock className="w-4 h-4 text-blue-400" />
+                <span className="font-medium">9am - 5pm</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <Users className="w-4 h-4 text-blue-400" />
@@ -297,44 +240,18 @@ export function TimelineSection() {
             </div>
           </div>
 
-          {/* Day Toggle */}
+          {/* Event Date Banner */}
           <div
             className={`flex justify-center mb-16 transition-all duration-1000 delay-200 ${isVisible ? "animate-fade-in-up opacity-100" : "opacity-0"}`}
           >
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-3 border border-white/20 shadow-2xl">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveDay(1)}
-                  className={`px-8 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 relative overflow-hidden ${
-                    activeDay === 1
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105"
-                      : "text-gray-300 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  <div className="relative z-10">
-                    <div className="font-bold">Day 1</div>
-                    <div className="text-xs opacity-80">June 26, 2025</div>
-                  </div>
-                  {activeDay === 1 && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 blur-xl"></div>
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveDay(2)}
-                  className={`px-8 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 relative overflow-hidden ${
-                    activeDay === 2
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105"
-                      : "text-gray-300 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  <div className="relative z-10">
-                    <div className="font-bold">Day 2</div>
-                    <div className="text-xs opacity-80">June 27, 2025</div>
-                  </div>
-                  {activeDay === 2 && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 blur-xl"></div>
-                  )}
-                </button>
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-3xl p-6 border border-purple-500/30 shadow-2xl">
+              <div className="text-center">
+                <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                  Thursday, June 26, 2025
+                </div>
+                <div className="text-gray-300 text-lg">
+                  University of Nairobi Graduation Square • 8:30 AM - 4:30 PM
+                </div>
               </div>
             </div>
           </div>
@@ -347,14 +264,14 @@ export function TimelineSection() {
             <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500/50 via-pink-500/50 to-purple-500/50 transform md:-translate-x-px rounded-full shadow-lg"></div>
 
             <div className="space-y-12">
-              {currentEvents.map((event, index) => {
+              {eventSchedule.map((event, index) => {
                 const Icon = event.icon
                 const isLeft = index % 2 === 0
                 const style = typeStyles[event.type]
 
                 return (
                   <div
-                    key={`${activeDay}-${index}`}
+                    key={index}
                     className={`relative flex items-center ${isLeft ? "md:flex-row" : "md:flex-row-reverse"} flex-row`}
                     style={{ animationDelay: `${index * 150}ms` }}
                     onMouseEnter={() => setHoveredEvent(index)}
@@ -461,16 +378,16 @@ export function TimelineSection() {
               <h3 className="text-3xl font-bold text-white mb-4">Ready to Transform Your Career?</h3>
               <p className="text-gray-300 mb-8 max-w-2xl mx-auto text-lg">
                 Don&apos;t miss this opportunity to connect with industry leaders, develop new skills, and take the next step
-                in your professional journey.
+                in your professional journey in just one day.
               </p>
-<Link href="/login">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transform hover:scale-105 font-semibold px-10 py-6 text-lg rounded-full shadow-2xl transition-all duration-300"
-              >
-                Register Now - It&apos;s Free!
-                <ArrowRight className="w-6 h-6 ml-2" />
-              </Button>
+              <Link href="/login">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transform hover:scale-105 font-semibold px-10 py-6 text-lg rounded-full shadow-2xl transition-all duration-300"
+                >
+                  Register Now - It&apos;s Free!
+                  <ArrowRight className="w-6 h-6 ml-2" />
+                </Button>
               </Link>
             </div>
           </div>
@@ -485,7 +402,7 @@ export function TimelineSection() {
                   <Calendar className="w-8 h-8 text-white" />
                 </div>
                 <h4 className="font-bold text-white mb-2">Advance Registration</h4>
-                <p className="text-sm text-gray-300">Register online for priority access and personalized ticket</p>
+                <p className="text-sm text-gray-300">Register online for priority access and personalized experience</p>
               </div>
 
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 text-center group hover:bg-white/10 transition-all duration-300">
