@@ -16,7 +16,7 @@ export function CompanyGoogleLogin() {
     <div className="space-y-4">
       <Button
         onClick={handleGoogleSignIn}
-        className="w-full"
+        className="w-full "
         size="lg"
       >
         <svg
