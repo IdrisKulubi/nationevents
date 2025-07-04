@@ -7,7 +7,7 @@ import { Building2 } from "lucide-react";
 export function CompanyGoogleLogin() {
   const handleGoogleSignIn = () => {
     signIn("google", { 
-      callbackUrl: "/employer/setup",
+      callbackUrl: "/employer/setup?from=company-onboard",
       state: "employer_registration" 
     });
   };

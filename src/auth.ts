@@ -52,6 +52,11 @@ export const {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
+      // Allow direct access to employer setup (for company onboard flow)
+      if (url.includes('/employer/setup')) {
+        return url.startsWith('/') ? `${baseUrl}${url}` : url;
+      }
+      
       // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Allows callback URLs on the same origin
