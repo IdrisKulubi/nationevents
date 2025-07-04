@@ -125,8 +125,8 @@ export default async function DashboardPage() {
                       <Calendar className="w-5 h-5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">June 26-27, 2025</p>
-                      <p className="text-sm text-orange-600 dark:text-orange-400">Two Days</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">July 8th, 2025</p>
+                      <p className="text-sm text-orange-600 dark:text-orange-400">One Day</p>
                     </div>
                   </div>
                   

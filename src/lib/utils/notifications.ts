@@ -109,7 +109,7 @@ export async function sendWelcomeSMS(data: WelcomeSMSData): Promise<boolean> {
 🎫 Ticket: ${data.ticketNumber}
 🔐 PIN: ${data.pin}
 
-📅 Jun 26-27, 2025 at UON Graduation Square, Nairobi
+📅 July 8th, 2025 at UON Graduation Square, Nairobi
 Keep this PIN safe for check-in!
 
 Support: +254 700 000 000 🚀`;
@@ -151,7 +151,7 @@ export async function sendPinReminderEmail(email: string, name: string, pin: str
       🎫 Ticket Number: ${ticketNumber}
       🔐 PIN Code: ${pin}
 
-      📅 Jun 26-27, 2025 at UON Graduation Square, Nairobi
+      📅 July 8th, 2025 at UON Graduation Square, Nairobi
       📍 Venue: UON Graduation Square, Nairobi
 
       Please keep this information secure and bring it with you to the event.
@@ -182,7 +182,7 @@ export async function sendPinReminderSMS(phoneNumber: string, name: string, pin:
 🎫 Ticket: ${ticketNumber}
 🔐 PIN: ${pin}
 
-📅 Jun 26-27 at UON Graduation Square, Nairobi
+📅 July 8th at UON Graduation Square, Nairobi
 Keep this safe for check-in! 🎯`;
 
     const result = await sendSMS({

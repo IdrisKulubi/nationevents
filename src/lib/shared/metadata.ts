@@ -11,7 +11,7 @@ const twitterSite = TWITTER_SITE
   
 export function constructMetadata({
   title = "Nation-Huawei Leap Job Fair 2025",
-  description = "A bold partnership between Nation Media Group and Huawei Technologies to bridge talent in Kenya with businesses that need it. Join us June 26-27, 2025 at UON Graduation Square, Nairobi for innovative booths, engaging panel discussions, and meaningful career connections.",
+  description = "A bold partnership between Nation Media Group and Huawei Technologies to bridge talent in Kenya with businesses that need it. Join us July 8th, 2025 at UON Graduation Square, Nairobi for innovative booths, engaging panel discussions, and meaningful career connections.",
   image = "https://res.cloudinary.com/db0i0umxn/image/upload/v1747817579/Screenshot_2025-05-2115227_vxo86w.png",
   icons = "/favicon.ico",
   noIndex = false,

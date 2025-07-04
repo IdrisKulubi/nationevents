@@ -69,6 +69,21 @@ export const {
         token.isNewUser = true;
       }
       
+      // On sign-in or when token is new, fetch role from DB and add to token
+      if (user) {
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, user.id!),
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
+        } catch (error) {
+          console.error("Failed to fetch user role for token:", error);
+          token.role = "user"; // Default role on error
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -76,6 +91,7 @@ export const {
         session.user.id = token.sub;
         session.user.email = token.email as string;
         session.user.isNewUser = !!token.isNewUser;
+        session.user.role = token.role as string | undefined; // Get role from token
         
         try {
           // Get user profile including job seeker data
@@ -93,7 +109,8 @@ export const {
           
           if (profile) {
             session.user.hasProfile = true;
-            session.user.role = profile.user.role || undefined;
+            // The role from the DB is the source of truth, but token is a good fallback
+            session.user.role = profile.user.role || token.role as string | undefined;
             session.user.profileCompleted = !!profile.jobSeeker?.id;
           } else {
             session.user.hasProfile = false;
@@ -115,6 +132,7 @@ export const {
           // Set default values when database is unreachable
           session.user.hasProfile = false;
           session.user.profileCompleted = false;
+          // The role from the token is already set, so we don't lose it here
           
           // Log additional context for debugging
           if (errorMessage.includes('timeout')) {

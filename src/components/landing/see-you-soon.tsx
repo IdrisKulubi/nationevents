@@ -73,7 +73,7 @@ export function SeeYouSoon() {
                 </span>
                 <br />
                 <span className="bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent drop-shadow-2xl">
-                  June 26th
+                  July 8th
                 </span>
               </h1>
               

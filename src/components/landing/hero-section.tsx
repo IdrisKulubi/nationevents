@@ -64,7 +64,7 @@ export function HeroSection() {
                 <Calendar className="w-5 h-5 text-purple-400" />
                 <div>
                   <p className="text-sm font-medium text-white">Date</p>
-                  <p className="text-xs text-gray-300">Jun 26, 2025</p>
+                  <p className="text-xs text-gray-300">July 8th, 2025</p>
                 </div>
               </div>
               

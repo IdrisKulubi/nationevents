@@ -219,7 +219,7 @@ export function TimelineSection() {
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <Calendar className="w-4 h-4 text-purple-400" />
-                <span className="font-medium">June 26, 2025</span>
+                <span className="font-medium">July 8th, 2025</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <Clock className="w-4 h-4 text-blue-400" />
@@ -247,7 +247,7 @@ export function TimelineSection() {
             <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-3xl p-6 border border-purple-500/30 shadow-2xl">
               <div className="text-center">
                 <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                  Thursday, June 26, 2025
+                  Thursday, July 8th, 2025
                 </div>
                 <div className="text-gray-300 text-lg">
                   University of Nairobi Graduation Square • 8:30 AM - 4:30 PM
