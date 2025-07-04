@@ -247,7 +247,7 @@ export function TimelineSection() {
             <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-md rounded-3xl p-6 border border-purple-500/30 shadow-2xl">
               <div className="text-center">
                 <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                  Thursday, July 8th, 2025
+                  Tuesday, July 8th, 2025
                 </div>
                 <div className="text-gray-300 text-lg">
                   University of Nairobi Graduation Square • 8:30 AM - 4:30 PM
