@@ -45,7 +45,7 @@ export async function createEmployerProfile(data: EmployerProfileData) {
       };
     }
 
-    // Check if user exists and has employer role
+    // Check if user exists
     const user = await db
       .select()
       .from(users)
@@ -54,10 +54,6 @@ export async function createEmployerProfile(data: EmployerProfileData) {
 
     if (!user[0]) {
       return { success: false, message: "User not found" };
-    }
-
-    if (user[0].role !== "employer") {
-      return { success: false, message: "Access denied: Employer role required" };
     }
 
     // Check if employer profile already exists
@@ -77,20 +73,32 @@ export async function createEmployerProfile(data: EmployerProfileData) {
     // Generate unique employer ID
     const employerId = `emp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create employer profile
-    await db.insert(employers).values({
-      id: employerId,
-      userId: data.userId,
-      companyName: data.companyName.trim(),
-      companyDescription: data.companyDescription.trim() || null,
-      industry: data.industry,
-      companySize: data.companySize,
-      website: data.website.trim() || null,
-      address: data.address.trim() || null,
-      contactPerson: data.contactPerson.trim() || null,
-      contactEmail: data.contactEmail.trim(),
-      contactPhone: data.contactPhone.trim() || null,
-      isVerified: false, // Admin can verify later
+    // Start transaction to update user role and create employer profile
+    await db.transaction(async (tx) => {
+      // Update user role to employer
+      await tx
+        .update(users)
+        .set({ 
+          role: "employer",
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, data.userId));
+
+      // Create employer profile
+      await tx.insert(employers).values({
+        id: employerId,
+        userId: data.userId,
+        companyName: data.companyName.trim(),
+        companyDescription: data.companyDescription.trim() || null,
+        industry: data.industry,
+        companySize: data.companySize,
+        website: data.website.trim() || null,
+        address: data.address.trim() || null,
+        contactPerson: data.contactPerson.trim() || null,
+        contactEmail: data.contactEmail.trim(),
+        contactPhone: data.contactPhone.trim() || null,
+        isVerified: false, // Admin can verify later
+      });
     });
 
     // Revalidate cache

@@ -16,6 +16,20 @@ export default async function DashboardPage() {
 
   const userProfile = await getUserProfile(session.user.id!);
   
+  // Handle different user roles
+  if (userProfile?.role === "employer") {
+    redirect("/employer");
+  }
+  
+  if (userProfile?.role === "admin") {
+    redirect("/admin");
+  }
+  
+  if (userProfile?.role === "security") {
+    redirect("/security");
+  }
+  
+  // Only redirect job seekers to profile setup if they haven't completed their profile
   if (!userProfile?.profileComplete) {
     redirect("/profile-setup");
   }

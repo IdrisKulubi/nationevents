@@ -68,7 +68,7 @@ export const {
       if (account && user) {
         token.isNewUser = true;
       }
-      
+
       // On sign-in or when token is new, fetch role from DB and add to token
       if (user) {
         try {

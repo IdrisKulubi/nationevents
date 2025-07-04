@@ -12,15 +12,15 @@ export default async function EmployerSetupPage() {
     redirect("/login");
   }
 
-  // Check if user has employer role
+  // Get user info
   const user = await db
     .select()
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  if (!user[0] || user[0].role !== "employer") {
-    redirect("/dashboard");
+  if (!user[0]) {
+    redirect("/login");
   }
 
   // Check if employer profile already exists

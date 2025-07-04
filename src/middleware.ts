@@ -55,6 +55,7 @@ const publicRoutes = [
   '/',
   '/login',
   '/profile-setup',
+  '/company-onboard',
   '/no-access',
   '/api/auth',
   '/api/sentry-example-api',
