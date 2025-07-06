@@ -75,7 +75,7 @@ export const {
         if (intentCookie?.value === "employer") {
           console.log("JWT: Employer intent detected. Updating role.", { userId: user.id });
           try {
-            await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id));
+            await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id!));
             // Clean up the cookie immediately after use
             cookieStore.delete("auth_intent");
           } catch (error) {

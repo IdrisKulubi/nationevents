@@ -17,7 +17,7 @@ const PROFILE_SETUP_ROUTES = {
 
 const DASHBOARD_ROUTES = {
   job_seeker: '/dashboard',
-  employer: '/employer/dashboard',
+  employer: '/employer',
   admin: '/admin',
   security: '/security',
 };
