@@ -47,9 +47,16 @@ export default async function EmployerSetupPage({
   }
 
   // If user already has employer role but no profile, allow setup
-  // If user has different role and not from company onboard, redirect
+  // If user has different role and not from company onboard, redirect to appropriate dashboard
   if (user.role !== "employer" && !fromCompanyOnboard) {
-    redirect("/dashboard");
+    // Redirect based on user's actual role
+    if (user.role === "admin") {
+      redirect("/admin");
+    } else if (user.role === "security") {
+      redirect("/security");
+    } else {
+      redirect("/dashboard");
+    }
   }
 
   return (

@@ -59,9 +59,23 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // Employer routes
-    if (pathname.startsWith('/employer/') && userRole !== 'employer') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+    // Employer routes - Allow access to employer setup during company onboard flow
+    if (pathname.startsWith('/employer/')) {
+      // Allow access to employer setup if coming from company onboard or user is employer
+      if (pathname === '/employer/setup' || pathname.startsWith('/employer/setup?')) {
+        const { searchParams } = request.nextUrl;
+        const fromCompanyOnboard = searchParams.get('from') === 'company-onboard';
+        
+        // Allow access if user is employer OR if they're coming from company onboard
+        if (userRole !== 'employer' && !fromCompanyOnboard) {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+      } else {
+        // For other employer routes, user must have employer role
+        if (userRole !== 'employer') {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+      }
     }
 
     // Security routes

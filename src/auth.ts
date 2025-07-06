@@ -47,6 +47,15 @@ export const {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
+      // Handle company onboard flow - preserve search params
+      if (url.includes('from=company-onboard') || url.includes('role=employer')) {
+        if (url.includes('/employer/setup')) {
+          return url.startsWith('/') ? `${baseUrl}${url}` : url;
+        }
+        // If not already going to employer setup, redirect there with company onboard params
+        return `${baseUrl}/employer/setup?from=company-onboard`;
+      }
+      
       // Allow direct access to employer setup (for company onboard flow)
       if (url.includes('/employer/setup')) {
         return url.startsWith('/') ? `${baseUrl}${url}` : url;
