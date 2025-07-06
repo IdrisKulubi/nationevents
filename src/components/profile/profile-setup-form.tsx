@@ -19,6 +19,8 @@ import { CVUploadField } from "./cv-upload-field";
 import { AdditionalDocumentsUpload } from "./additional-documents-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useSessionManager } from "@/lib/session-utils";
 
 // Job sectors/categories from employer side
 const JOB_SECTORS = [
@@ -121,6 +123,7 @@ interface AdditionalDocument {
 
 export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProps) {
   const router = useRouter();
+  const { refreshSession } = useSessionManager();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
@@ -287,13 +290,28 @@ export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProp
         hasExistingProfile: !!existingProfile?.jobSeeker?.id,
       });
 
-      await createJobSeekerProfile(profileData);
+      const result = await createJobSeekerProfile(profileData);
       
-      toast.success("Registration completed! Our team will review your application and match you with suitable companies. You'll receive notifications with your interview schedule and booth assignment details for the Nation-Huawei Leap Job Fair.");
-      
-      // Force a hard refresh to ensure session is updated
-      console.log("Profile creation successful, forcing page refresh to update session");
-      window.location.href = "/dashboard";
+      if (result.success) {
+        toast.success("Registration completed! Our team will review your application and match you with suitable companies. You'll receive notifications with your interview schedule and booth assignment details for the Nation-Huawei Leap Job Fair.");
+        
+        // Force session update to refresh JWT token with latest profile data
+        console.log("Profile creation successful, updating session and redirecting");
+        
+        if (result.shouldUpdateSession) {
+          await refreshSession(); // Force session refresh
+          
+          // Small delay to ensure session is updated, then redirect
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+          }, 500);
+        } else {
+          // If no session update needed, redirect immediately
+          window.location.href = "/dashboard";
+        }
+      } else {
+        toast.error(result.message || "Failed to create profile. Please try again.");
+      }
     } catch (error) {
       console.error("Profile creation error:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";

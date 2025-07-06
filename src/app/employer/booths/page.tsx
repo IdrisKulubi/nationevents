@@ -70,7 +70,7 @@ export default async function EmployerBoothsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Booth Management</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 mt-2 dark:text-gray-900">
             Configure and manage your exhibition booth setup
           </p>
         </div>

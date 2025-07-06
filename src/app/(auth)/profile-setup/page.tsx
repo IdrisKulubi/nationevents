@@ -16,13 +16,24 @@ export default async function ProfileSetupPage() {
   
   // Only redirect if profile is truly complete (has both jobSeeker record AND CV)
   if (existingProfile?.profileComplete && existingProfile?.jobSeeker?.cvUrl) {
-    console.log("Profile setup: User has complete profile, redirecting to dashboard");
+    console.log("Profile setup: User has complete profile, redirecting to dashboard", {
+      profileComplete: existingProfile.profileComplete,
+      hasCvUrl: !!existingProfile.jobSeeker?.cvUrl,
+      hasJobSeekerRecord: !!existingProfile.jobSeeker?.id,
+    });
+    
+    // Add a small delay to allow any ongoing session updates to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     redirect("/dashboard");
   }
 
   // If profile exists but is incomplete, allow them to complete it
   if (existingProfile?.jobSeeker?.id && !existingProfile?.jobSeeker?.cvUrl) {
-    console.log("Profile setup: User has incomplete profile, allowing completion");
+    console.log("Profile setup: User has incomplete profile, allowing completion", {
+      hasJobSeekerRecord: !!existingProfile.jobSeeker?.id,
+      hasCvUrl: !!existingProfile.jobSeeker?.cvUrl,
+    });
   }
 
   return (
