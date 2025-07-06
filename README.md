@@ -42,14 +42,12 @@ The **Huawei Career Summit Job Fair Management Platform** is a comprehensive web
 - **AWS S3** - File storage for CVs and documents
 - **Twilio** - SMS notifications and PIN delivery
 - **Resend** - Email service for notifications
-- **Sentry** - Error monitoring and performance tracking
 - **Google OAuth** - Social authentication
 
 ### **Security & Monitoring**
 - **6-digit PIN system** - Secure event check-in
 - **Role-based access control** - Admin, Employer, Job Seeker, Security
 - **Offline verification** - Security staff can work without internet
-- **Real-time monitoring** - Sentry integration for error tracking
 
 ### **Architecture**
 
