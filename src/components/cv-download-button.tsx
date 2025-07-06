@@ -5,9 +5,11 @@ import { Download } from "lucide-react";
 
 interface CVDownloadButtonProps {
   cvUrl: string;
+  candidateName: string;
 }
 
-export function CVDownloadButton({ cvUrl }: CVDownloadButtonProps) {
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function CVDownloadButton({ cvUrl, candidateName }: CVDownloadButtonProps) {
   const convertToPublicUrl = (storageUrl: string): string => {
     // Convert R2 storage URL to public viewing URL
     if (storageUrl.includes('r2.cloudflarestorage.com')) {

@@ -12,7 +12,7 @@ export interface EmployerProfileData {
   companyName: string;
   companyDescription?: string;
   industry: string;
-  companySize: string;
+  companySize: "startup" | "small" | "medium" | "large" | "enterprise";
   website?: string;
   address?: string;
   contactPerson?: string;
@@ -27,6 +27,15 @@ export async function createEmployerProfile(data: EmployerProfileData) {
       return { 
         success: false, 
         message: "Please fill in all required fields" 
+      };
+    }
+
+    // Validate companySize enum
+    const validCompanySizes = ["startup", "small", "medium", "large", "enterprise"];
+    if (!validCompanySizes.includes(data.companySize)) {
+      return { 
+        success: false, 
+        message: "Invalid company size specified" 
       };
     }
 

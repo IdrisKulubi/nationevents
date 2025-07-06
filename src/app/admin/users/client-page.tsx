@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,14 +73,70 @@ interface UsersClientPageProps {
 export function UsersClientPage({ initialData }: UsersClientPageProps) {
   const [loading, setLoading] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [displayCount, setDisplayCount] = useState(50);
   const router = useRouter();
 
   const { userStats, allUsers } = initialData;
 
-  // Calculate totals
-  const totalUsers = userStats.reduce((sum, stat) => sum + stat.count, 0);
-  const totalActive = userStats.reduce((sum, stat) => sum + stat.active, 0);
-  const totalInactive = userStats.reduce((sum, stat) => sum + stat.inactive, 0);
+  // Calculate accurate totals from actual users data
+  const actualStats = useMemo(() => {
+    const total = allUsers.length;
+    const active = allUsers.filter(({ user }) => user.isActive).length;
+    const inactive = total - active;
+    const adminCount = allUsers.filter(({ user }) => user.role === 'admin').length;
+    
+    return { total, active, inactive, adminCount };
+  }, [allUsers]);
+
+  // Calculate role distribution from actual users
+  const roleDistribution = useMemo(() => {
+    const distribution: { [key: string]: { total: number; active: number; inactive: number } } = {};
+    
+    allUsers.forEach(({ user }) => {
+      const role = user.role || 'job_seeker';
+      if (!distribution[role]) {
+        distribution[role] = { total: 0, active: 0, inactive: 0 };
+      }
+      distribution[role].total += 1;
+      if (user.isActive) {
+        distribution[role].active += 1;
+      } else {
+        distribution[role].inactive += 1;
+      }
+    });
+    
+    return distribution;
+  }, [allUsers]);
+
+  // Filter and search users
+  const filteredUsers = useMemo(() => {
+    return allUsers.filter(({ user, jobSeeker, employer }) => {
+      // Search filter
+      const searchTerm = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        user.name?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm) ||
+        employer?.companyName?.toLowerCase().includes(searchTerm);
+
+      // Role filter
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+
+      // Status filter
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "active" && user.isActive) ||
+        (statusFilter === "inactive" && !user.isActive);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [allUsers, searchQuery, roleFilter, statusFilter]);
+
+  // Users to display (with pagination)
+  const displayedUsers = useMemo(() => {
+    return filteredUsers.slice(0, displayCount);
+  }, [filteredUsers, displayCount]);
 
   const roleColors = {
     admin: "bg-purple-100 text-purple-800",
@@ -136,12 +192,31 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
     }
   };
 
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + 50);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setDisplayCount(50); // Reset display count when searching
+  };
+
+  const handleRoleFilterChange = (value: string) => {
+    setRoleFilter(value);
+    setDisplayCount(50); // Reset display count when filtering
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setDisplayCount(50); // Reset display count when filtering
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
           <p className="text-gray-600 mt-2">
             Manage all users, roles, and permissions across the platform
           </p>
@@ -165,7 +240,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-blue-600 mb-1">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalUsers.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">{actualStats.total.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     <span className="inline-flex items-center">
                       <TrendingUp className="h-3 w-3 mr-1" />
@@ -188,11 +263,11 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-600 mb-1">Active Users</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalActive.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">{actualStats.active.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     <span className="inline-flex items-center">
                       <Activity className="h-3 w-3 mr-1" />
-                      {totalUsers > 0 ? Math.round((totalActive / totalUsers) * 100) : 0}% of total
+                      {actualStats.total > 0 ? Math.round((actualStats.active / actualStats.total) * 100) : 0}% of total
                     </span>
                   </p>
                 </div>
@@ -211,7 +286,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-orange-600 mb-1">Inactive Users</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalInactive.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">{actualStats.inactive.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     <span className="inline-flex items-center">
                       <AlertTriangle className="h-3 w-3 mr-1" />
@@ -235,7 +310,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
                 <div>
                   <p className="text-sm font-medium text-purple-600 mb-1">Admins</p>
                   <p className="text-3xl font-bold text-gray-900">
-                    {userStats.find(stat => stat.role === 'admin')?.count || 0}
+                    {actualStats.adminCount}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     <span className="inline-flex items-center">
@@ -263,21 +338,21 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {userStats.map((stat) => {
-              const Icon = getRoleIcon(stat.role || '');
+            {Object.entries(roleDistribution).map(([role, stats]) => {
+              const Icon = getRoleIcon(role);
               return (
-                <div key={stat.role} className="text-center p-4 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors">
+                <div key={role} className="text-center p-4 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors">
                   <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-50 flex items-center justify-center">
                     <Icon className="h-8 w-8 text-gray-600" />
                   </div>
                   <h3 className="font-semibold text-gray-900 capitalize mb-1">
-                    {stat.role?.replace('_', ' ')}
+                    {role.replace('_', ' ')}
                   </h3>
-                  <p className="text-2xl font-bold text-blue-600 mb-1">{stat.count}</p>
+                  <p className="text-2xl font-bold text-blue-600 mb-1">{stats.total}</p>
                   <div className="flex justify-center gap-2 text-xs">
-                    <span className="text-green-600">{stat.active} active</span>
+                    <span className="text-green-600">{stats.active} active</span>
                     <span className="text-gray-400">•</span>
-                    <span className="text-orange-600">{stat.inactive} inactive</span>
+                    <span className="text-orange-600">{stats.inactive} inactive</span>
                   </div>
                 </div>
               );
@@ -302,10 +377,12 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
                 <Input
                   placeholder="Search by name, email, or company..."
                   className="pl-10"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                 />
               </div>
             </div>
-            <Select defaultValue="all">
+            <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -317,7 +394,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
                 <SelectItem value="security">Security</SelectItem>
               </SelectContent>
             </Select>
-            <Select defaultValue="all">
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -328,6 +405,25 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
               </SelectContent>
             </Select>
           </div>
+          {(searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+              <span>Showing {filteredUsers.length} of {allUsers.length} users</span>
+              {(searchQuery || roleFilter !== "all" || statusFilter !== "all") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setRoleFilter("all");
+                    setStatusFilter("all");
+                    setDisplayCount(50);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -336,7 +432,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-gray-600" />
-            All Users ({allUsers.length})
+            All Users ({filteredUsers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -353,7 +449,7 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allUsers.slice(0, 50).map(({ user, jobSeeker, employer }) => (
+                {displayedUsers.map(({ user, jobSeeker, employer }) => (
                   <TableRow key={user.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -476,11 +572,19 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
             </Table>
           </div>
           
-          {allUsers.length > 50 && (
+          {filteredUsers.length > displayedUsers.length && (
             <div className="mt-4 text-center">
-              <Button variant="outline">
-                Load More Users ({allUsers.length - 50} remaining)
+              <Button variant="outline" onClick={handleLoadMore}>
+                Load More Users ({filteredUsers.length - displayedUsers.length} remaining)
               </Button>
+            </div>
+          )}
+          
+          {filteredUsers.length === 0 && (
+            <div className="mt-4 text-center py-8 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No users found matching your criteria.</p>
+              <p className="text-sm mt-1">Try adjusting your search or filters.</p>
             </div>
           )}
         </CardContent>

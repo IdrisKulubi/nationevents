@@ -219,7 +219,7 @@ export default async function HuaweiSetupPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UsersIcon className="h-5 w-5 text-blue-600" />
+              <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Job Seeker Management
             </CardTitle>
           </CardHeader>
