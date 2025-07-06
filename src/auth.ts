@@ -47,156 +47,92 @@ export const {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      console.log("Auth redirect callback:", { url, baseUrl });
-      
-      // Handle company onboard flow - preserve search params
-      if (url.includes('from=company-onboard') || url.includes('role=employer')) {
-        console.log("Company onboard flow detected, redirecting to employer setup");
-        if (url.includes('/employer/setup')) {
-          return url.startsWith('/') ? `${baseUrl}${url}` : url;
-        }
-        // If not already going to employer setup, redirect there with company onboard params
-        return `${baseUrl}/employer/setup?from=company-onboard`;
-      }
-      
-      // Allow direct access to employer setup (for company onboard flow)
-      if (url.includes('/employer/setup')) {
-        console.log("Direct employer setup access");
-        return url.startsWith('/') ? `${baseUrl}${url}` : url;
-      }
+      console.log("[AUTH_FLOW] Redirect callback invoked.", { url, baseUrl });
       
       // Allows relative callback URLs
       if (url.startsWith("/")) {
-        console.log("Relative callback URL:", url);
+        console.log("[AUTH_FLOW] Allowing relative callback URL:", url);
         return `${baseUrl}${url}`;
       }
       // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) {
-        console.log("Same origin callback URL:", url);
+        console.log("[AUTH_FLOW] Allowing same-origin callback URL:", url);
         return url;
       }
-      // Default redirect to dashboard
-      console.log("Default redirect to dashboard");
+      
+      // For all other cases, default to a safe dashboard page.
+      console.log("[AUTH_FLOW] Defaulting to dashboard redirect.");
       return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, account, user, trigger, session }) {
-      if (account) {
-        token.provider = account.provider;
-      }
-      
-      // Mark new users (when account exists, it's usually a sign in)
-      if (account && user) {
-        token.isNewUser = true;
-      }
-
-      // Force refresh user data when session is updated, on sign-in, or periodically
-      const shouldRefreshRole = user || trigger === "update" || !token.role;
-      
-      // Also refresh if it's been more than 5 minutes since last update.
-      const lastUpdate = token.lastRoleUpdate as number || 0;
-      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-      const shouldPeriodicRefresh = lastUpdate < fiveMinutesAgo;
-
-      if (shouldRefreshRole || shouldPeriodicRefresh) {
+    async jwt({ token, user, trigger, account }) {
+      // On initial sign-in, persist the user's role and ID to the token.
+      if (user) {
+        token.sub = user.id; // Ensure 'sub' is set to the user's database ID
+        
+        console.log("JWT: Initial sign-in or user object available.", { userId: user.id, trigger });
+        
+        // WORKAROUND: Fetch user and profile in two steps to avoid Drizzle 'relations' issue.
         try {
-          console.log("JWT: Refreshing user role from database", {
-            userId: user?.id || token.sub,
-            trigger,
-            shouldRefreshRole,
-            shouldPeriodicRefresh,
-            lastUpdate: lastUpdate > 0 ? new Date(lastUpdate).toISOString() : "Never"
-          });
-          
           const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, user?.id || token.sub!),
+            where: eq(users.id, user.id!),
           });
-          
+
           if (dbUser) {
-            const oldRole = token.role;
             token.role = dbUser.role;
-            token.lastRoleUpdate = Date.now();
-            
-            if (oldRole !== dbUser.role) {
-              console.log("JWT: Role changed detected", {
-                userId: token.sub,
-                oldRole,
-                newRole: dbUser.role,
-                timestamp: new Date().toISOString()
-              });
-            }
+            const jobSeekerProfile = await db.query.jobSeekers.findFirst({
+              where: eq(jobSeekers.userId, dbUser.id),
+            });
+            token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
+            console.log("JWT: User data fetched on sign-in.", { role: token.role, profileCompleted: token.profileCompleted });
           } else {
-            console.warn("JWT: User not found in database", { userId: user?.id || token.sub });
-            token.role = "job_seeker"; // Default role if user not found
+            console.warn("JWT: User not found in database during initial sign-in.", { userId: user.id });
+            token.role = 'job_seeker'; // Default role
+            token.profileCompleted = false;
           }
         } catch (error) {
-          console.error("JWT: Failed to fetch user role for token:", error);
-          // Keep existing role if database is unreachable
-          if (!token.role) {
-            token.role = "job_seeker"; // Default role only if no existing role
-          }
+          console.error("JWT: Error fetching user on sign-in.", error);
+          token.role = 'job_seeker';
+          token.profileCompleted = false;
         }
       }
-      
+
+      // Handle session updates, e.g., after profile completion or role change
+      if (trigger === "update") {
+        console.log("JWT: 'update' trigger received. Refreshing token data from DB.", { userId: token.sub });
+        // WORKAROUND: Fetch user and profile in two steps to avoid Drizzle 'relations' issue.
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.sub!),
+          });
+
+          if (dbUser) {
+            token.role = dbUser.role;
+            const jobSeekerProfile = await db.query.jobSeekers.findFirst({
+              where: eq(jobSeekers.userId, dbUser.id),
+            });
+            token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
+            console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
+          } else {
+             console.warn("JWT: User not found during 'update' trigger.", { userId: token.sub });
+          }
+        } catch (error) {
+          console.error("JWT: Error refreshing token on 'update' trigger.", error);
+          // Avoid overwriting existing token data if DB fails
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
+      // The session callback is for passing data from the token to the client.
+      // It should not perform any database lookups.
       if (session.user && token.sub) {
         session.user.id = token.sub;
-        session.user.email = token.email as string;
-        session.user.isNewUser = !!token.isNewUser;
-        session.user.role = token.role as string | undefined; // Get role from token
+        session.user.role = token.role as string | undefined;
+        session.user.profileCompleted = token.profileCompleted as boolean;
         
-        try {
-          // Get user profile including job seeker data
-          const userWithProfile = await db
-            .select({
-              user: users,
-              jobSeeker: jobSeekers,
-            })
-            .from(users)
-            .leftJoin(jobSeekers, eq(jobSeekers.userId, users.id))
-            .where(eq(users.id, token.sub))
-            .limit(1);
-          
-          const profile = userWithProfile[0];
-          
-          if (profile) {
-            session.user.hasProfile = true;
-            // The role from the DB is the source of truth, but token is a good fallback
-            session.user.role = profile.user.role || token.role as string | undefined;
-            // More robust profile completion check
-            session.user.profileCompleted = !!(profile.jobSeeker?.id && profile.jobSeeker?.cvUrl);
-          } else {
-            session.user.hasProfile = false;
-            session.user.profileCompleted = false;
-          }
-        } catch (error) {
-          console.error("Database connection error in auth session:", error);
-          
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const errorCode = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
-          const errorName = error instanceof Error ? error.name : 'Unknown';
-          
-          console.error("Error details:", {
-            message: errorMessage,
-            code: errorCode,
-            name: errorName,
-            userId: token.sub
-          });
-          
-          // Set default values when database is unreachable
-          session.user.hasProfile = false;
-          session.user.profileCompleted = false;
-          // The role from the token is already set, so we don't lose it here
-          
-          // Log additional context for debugging
-          if (errorMessage.includes('timeout')) {
-            console.error("Database timeout - check AWS RDS connectivity and security groups");
-          }
-          if (errorMessage.includes('authentication')) {
-            console.error("Database authentication failed - check credentials in POSTGRES_URL");
-          }
-        }
+        // Deprecating hasProfile in favor of profileCompleted for clarity, but keeping for compatibility
+        session.user.hasProfile = token.profileCompleted as boolean;
       }
       return session;
     },

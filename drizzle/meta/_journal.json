@@ -15,6 +15,13 @@
       "when": 1750361557992,
       "tag": "0001_legal_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751808265790,
+      "tag": "0002_square_iron_patriot",
+      "breakpoints": true
     }
   ]
 }
