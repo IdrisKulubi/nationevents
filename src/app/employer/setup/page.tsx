@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { EmployerSetupForm } from "@/components/employer/employer-setup-form";
 import db from "@/db/drizzle";
-import { users } from "@/db/schema";
+import { users, employers } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export default async function EmployerSetupPage({
@@ -32,8 +32,23 @@ export default async function EmployerSetupPage({
 
   const user = currentUser[0];
 
+  // Check if employer profile already exists
+  const existingEmployerProfile = await db
+    .select()
+    .from(employers)
+    .where(eq(employers.userId, session.user.id))
+    .limit(1);
+
+  // If employer profile exists, redirect to employer dashboard
+  if (existingEmployerProfile[0]) {
+    console.log("Employer profile already exists, redirecting to employer dashboard");
+    redirect("/employer");
+  }
+
   // If user is coming from company onboard flow and doesn't have employer role, set it
+  let roleWasUpdated = false;
   if (fromCompanyOnboard && user.role !== "employer") {
+    console.log("Setting user role to employer for company onboard flow");
     await db
       .update(users)
       .set({ 
@@ -44,11 +59,13 @@ export default async function EmployerSetupPage({
     
     // Update the user object for the component
     user.role = "employer";
+    roleWasUpdated = true;
   }
 
   // If user already has employer role but no profile, allow setup
   // If user has different role and not from company onboard, redirect to appropriate dashboard
   if (user.role !== "employer" && !fromCompanyOnboard) {
+    console.log("User is not employer and not from company onboard, redirecting based on role");
     // Redirect based on user's actual role
     if (user.role === "admin") {
       redirect("/admin");
@@ -80,6 +97,7 @@ export default async function EmployerSetupPage({
             userName={user.name} 
             userEmail={user.email}
             isFromCompanyOnboard={fromCompanyOnboard}
+            roleWasUpdated={roleWasUpdated}
           />
         </div>
       </div>

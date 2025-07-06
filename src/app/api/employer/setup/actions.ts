@@ -47,9 +47,12 @@ export async function createEmployerProfile(data: EmployerProfileData) {
       .limit(1);
 
     if (existingProfile[0]) {
+      console.log("Employer profile already exists, returning success");
       return { 
-        success: false, 
-        message: "Employer profile already exists for this user" 
+        success: true, 
+        message: `Welcome back, ${existingProfile[0].companyName}! Redirecting to your dashboard...`,
+        employerId: existingProfile[0].id,
+        shouldUpdateSession: true // Flag to trigger session update
       };
     }
 
@@ -96,11 +99,13 @@ export async function createEmployerProfile(data: EmployerProfileData) {
     // Revalidate cache
     revalidatePath("/employer");
     revalidatePath("/employer/setup");
+    revalidatePath("/dashboard");
 
     return { 
       success: true, 
       message: `Welcome to the platform, ${data.companyName}! Redirecting to your dashboard...`,
-      employerId
+      employerId,
+      shouldUpdateSession: true // Flag to trigger session update
     };
 
   } catch (error) {

@@ -57,16 +57,6 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
       expectedSalaryType: typeof data.expectedSalary,
     });
 
-    // Debug: Log the incoming data to see what we're receiving
-    console.log("🔍 CreateJobSeekerProfile received data:", {
-      userId: data.userId,
-      fullName: data.fullName,
-      skills: data.skills,
-      expectedSalary: data.expectedSalary,
-      skillsType: typeof data.skills,
-      expectedSalaryType: typeof data.expectedSalary,
-    });
-
     const session = await auth();
     if (!session?.user?.id) {
       throw new Error("Unauthorized");
@@ -80,7 +70,34 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
       .limit(1);
 
     if (existingProfile.length > 0) {
-      throw new Error("Profile already exists for this user");
+      console.log("Profile already exists, updating instead of creating new one");
+      
+      // Update existing profile instead of throwing error
+      const existingJobSeeker = existingProfile[0];
+      
+      // If profile already has CV, just return success
+      if (existingJobSeeker.cvUrl) {
+        console.log("Profile already complete with CV, returning success");
+        return {
+          success: true,
+          message: "Profile already complete",
+          data: {
+            pin: existingJobSeeker.pin,
+            ticketNumber: existingJobSeeker.ticketNumber,
+          }
+        };
+      }
+      
+      // Update incomplete profile
+      await updateUserProfile(data.userId, data);
+      return {
+        success: true,
+        message: "Profile updated successfully",
+        data: {
+          pin: existingJobSeeker.pin,
+          ticketNumber: existingJobSeeker.ticketNumber,
+        }
+      };
     }
 
     // Generate PIN and ticket number
@@ -234,14 +251,26 @@ export async function getUserProfile(userId: string) {
 
     const { user, jobSeeker } = result[0];
     
+    // More robust profile completion check
+    const profileComplete = !!(jobSeeker?.id && jobSeeker?.cvUrl);
+    
     return {
       ...user,
       jobSeeker,
-      profileComplete: !!jobSeeker?.id,
+      profileComplete,
     };
 
   } catch (error) {
     console.error("Error fetching user profile:", error);
+    
+    // Log additional context for debugging
+    console.error("getUserProfile error context:", {
+      userId,
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    
+    // Return null to let calling code handle the error appropriately
     return null;
   }
 }

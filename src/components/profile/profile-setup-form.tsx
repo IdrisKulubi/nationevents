@@ -106,6 +106,7 @@ interface ProfileSetupFormProps {
     name?: string | null;
     email?: string | null;
   };
+  existingProfile?: any;
 }
 
 interface AdditionalDocument {
@@ -118,7 +119,7 @@ interface AdditionalDocument {
   fileType?: string;
 }
 
-export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
+export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -237,6 +238,13 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
       return;
     }
 
+    // Check if profile already exists to prevent duplicate submissions
+    if (existingProfile?.jobSeeker?.id && existingProfile?.jobSeeker?.cvUrl) {
+      console.log("Profile already exists and is complete, redirecting to dashboard");
+      router.push("/dashboard");
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -276,18 +284,29 @@ export function ProfileSetupForm({ user }: ProfileSetupFormProps) {
         expectedSalary: profileData.expectedSalary,
         skillsType: typeof profileData.skills,
         expectedSalaryType: typeof profileData.expectedSalary,
+        hasExistingProfile: !!existingProfile?.jobSeeker?.id,
       });
 
       await createJobSeekerProfile(profileData);
       
       toast.success("Registration completed! Our team will review your application and match you with suitable companies. You'll receive notifications with your interview schedule and booth assignment details for the Nation-Huawei Leap Job Fair.");
       
-      // Use router.push with refresh to ensure fresh database check
-      router.push("/dashboard");
-      router.refresh();
+      // Force a hard refresh to ensure session is updated
+      console.log("Profile creation successful, forcing page refresh to update session");
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error("Profile creation error:", error);
-      toast.error("Failed to create profile. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      
+      // Handle specific error cases
+      if (errorMessage.includes("already exists")) {
+        toast.error("Profile already exists. Redirecting to dashboard...");
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+      } else {
+        toast.error("Failed to create profile. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

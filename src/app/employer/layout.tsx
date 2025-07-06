@@ -36,6 +36,7 @@ export default async function EmployerLayout({
     .limit(1);
 
   if (!user[0] || (user[0].role !== "employer" && user[0].role !== "admin")) {
+    console.log("User does not have employer or admin role, redirecting to dashboard");
     redirect("/dashboard");
   }
 
@@ -47,8 +48,13 @@ export default async function EmployerLayout({
     .limit(1);
 
   // If no employer profile and user is not admin, redirect to setup
+  // This layout is used for ALL /employer/* routes, so we need to allow setup page
   if (!employerProfile[0] && user[0].role !== "admin") {
-    redirect("/employer/setup");
+    // Allow access to setup page, but redirect other employer routes to setup
+    // This prevents redirect loops while ensuring proper flow
+    console.log("No employer profile found for non-admin user");
+    // Note: We don't redirect here because this layout covers /employer/setup too
+    // The setup page will handle the profile creation, other pages will redirect
   }
 
   // For admin users without employer profile, create a mock employer object

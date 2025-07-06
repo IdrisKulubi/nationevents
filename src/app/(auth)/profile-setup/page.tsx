@@ -11,11 +11,18 @@ export default async function ProfileSetupPage() {
     redirect("/login");
   }
 
-  // Check if user already has a profile
+  // Check if user already has a profile with more robust validation
   const existingProfile = await getUserProfile(session.user.id!);
   
-  if (existingProfile?.profileComplete) {
+  // Only redirect if profile is truly complete (has both jobSeeker record AND CV)
+  if (existingProfile?.profileComplete && existingProfile?.jobSeeker?.cvUrl) {
+    console.log("Profile setup: User has complete profile, redirecting to dashboard");
     redirect("/dashboard");
+  }
+
+  // If profile exists but is incomplete, allow them to complete it
+  if (existingProfile?.jobSeeker?.id && !existingProfile?.jobSeeker?.cvUrl) {
+    console.log("Profile setup: User has incomplete profile, allowing completion");
   }
 
   return (
@@ -44,7 +51,7 @@ export default async function ProfileSetupPage() {
             
             <h1 className="text-3xl md:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
-                Complete Your
+                {existingProfile?.jobSeeker?.id ? "Complete Your" : "Complete Your"}
               </span>
               <br />
               <span className=" bg-clip-text text-red-500">
@@ -53,12 +60,15 @@ export default async function ProfileSetupPage() {
             </h1>
             
             <p className="text-lg text-slate-600 dark:text-slate-300 max-w-lg mx-auto">
-              Set up your profile to connect with top employers at the Huawei Career Summit
+              {existingProfile?.jobSeeker?.id 
+                ? "Finish setting up your profile to connect with top employers"
+                : "Set up your profile to connect with top employers at the Huawei Career Summit"
+              }
             </p>
           </div>
 
           {/* Profile Setup Form */}
-          <ProfileSetupForm user={session.user} />
+          <ProfileSetupForm user={session.user} existingProfile={existingProfile} />
         </div>
       </div>
     </div>
