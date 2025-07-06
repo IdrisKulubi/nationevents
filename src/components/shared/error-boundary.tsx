@@ -40,6 +40,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       console.error('Error Boundary caught an error:', error, errorInfo);
     }
     
+    // Set error state without triggering Sentry
     this.setState({
       hasError: true,
       error,

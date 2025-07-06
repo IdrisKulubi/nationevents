@@ -11,6 +11,8 @@ const publicRoutes = [
   '/company-onboard',
   '/no-access',
   '/api/auth',
+  '/api/sentry-example-api',
+  '/sentry-example-page',
 ];
 
 export async function middleware(request: NextRequest) {
