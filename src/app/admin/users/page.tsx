@@ -4,6 +4,7 @@ import db from "@/db/drizzle";
 import { users, jobSeekers, employers } from "@/db/schema";
 import { eq, desc, count, sql } from "drizzle-orm";
 import { UsersClientPage } from "./client-page";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 async function getUsersData() {
   // Get user statistics
@@ -65,5 +66,9 @@ export default async function AdminUsersPage() {
 
   const { userStats, recentUsers, allUsers } = await getUsersData();
 
-  return <UsersClientPage initialData={{ userStats, allUsers }} />;
+  return (
+    <ErrorBoundary>
+      <UsersClientPage initialData={{ userStats, allUsers }} />
+    </ErrorBoundary>
+  );
 } 

@@ -166,7 +166,12 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
         toast.error("Failed to update user status");
       }
     } catch (error) {
-      console.error("Error toggling user status:", error);
+      // Use a more specific error logging approach
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Only log to console in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error toggling user status:", errorMessage);
+      }
       toast.error("An error occurred while updating user status");
     } finally {
       setLoading(false);
@@ -185,7 +190,12 @@ export function UsersClientPage({ initialData }: UsersClientPageProps) {
         toast.error("Failed to delete user");
       }
     } catch (error) {
-      console.error("Error deleting user:", error);
+      // Use a more specific error logging approach
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Only log to console in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error deleting user:", errorMessage);
+      }
       toast.error("An error occurred while deleting the user");
     } finally {
       setLoading(false);
