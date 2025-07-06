@@ -13,6 +13,8 @@ import { Building2, Users, Globe, Mail, Phone, MapPin, CheckCircle, AlertTriangl
 interface EmployerSetupFormProps {
   userId: string;
   userName: string;
+  userEmail?: string;
+  isFromCompanyOnboard?: boolean;
 }
 
 const industries = [
@@ -30,7 +32,7 @@ const companySizes = [
   { value: "enterprise", label: "Enterprise (1000+ employees)" },
 ];
 
-export function EmployerSetupForm({ userId, userName }: EmployerSetupFormProps) {
+export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOnboard }: EmployerSetupFormProps) {
   const [formData, setFormData] = useState({
     companyName: "",
     companyDescription: "",
@@ -39,7 +41,7 @@ export function EmployerSetupForm({ userId, userName }: EmployerSetupFormProps) 
     website: "",
     address: "",
     contactPerson: userName,
-    contactEmail: "",
+    contactEmail: userEmail || "",
     contactPhone: "",
   });
 

@@ -7,53 +7,27 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-interface EmployerProfileData {
+export interface EmployerProfileData {
   userId: string;
   companyName: string;
-  companyDescription: string;
+  companyDescription?: string;
   industry: string;
-  companySize: "startup" | "small" | "medium" | "large" | "enterprise";
-  website: string;
-  address: string;
-  contactPerson: string;
+  companySize: string;
+  website?: string;
+  address?: string;
+  contactPerson?: string;
   contactEmail: string;
-  contactPhone: string;
+  contactPhone?: string;
 }
 
 export async function createEmployerProfile(data: EmployerProfileData) {
   try {
-    const session = await auth();
-    
-    if (!session?.user?.id || session.user.id !== data.userId) {
-      return { success: false, message: "Authentication required" };
-    }
-
     // Validate required fields
-    if (!data.companyName || !data.industry || !data.companySize || !data.contactEmail) {
+    if (!data.userId || !data.companyName || !data.industry || !data.companySize || !data.contactEmail) {
       return { 
         success: false, 
         message: "Please fill in all required fields" 
       };
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.contactEmail)) {
-      return { 
-        success: false, 
-        message: "Please provide a valid email address" 
-      };
-    }
-
-    // Check if user exists
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, data.userId))
-      .limit(1);
-
-    if (!user[0]) {
-      return { success: false, message: "User not found" };
     }
 
     // Check if employer profile already exists
@@ -66,39 +40,48 @@ export async function createEmployerProfile(data: EmployerProfileData) {
     if (existingProfile[0]) {
       return { 
         success: false, 
-        message: "Employer profile already exists" 
+        message: "Employer profile already exists for this user" 
       };
     }
 
-    // Generate unique employer ID
-    const employerId = `emp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.contactEmail)) {
+      return { 
+        success: false, 
+        message: "Please enter a valid email address" 
+      };
+    }
 
-    // Start transaction to update user role and create employer profile
-    await db.transaction(async (tx) => {
-      // Update user role to employer
-      await tx
-        .update(users)
-        .set({ 
-          role: "employer",
-          updatedAt: new Date()
-        })
-        .where(eq(users.id, data.userId));
+    // Validate website URL if provided
+    if (data.website && data.website.trim()) {
+      try {
+        new URL(data.website.startsWith('http') ? data.website : `https://${data.website}`);
+      } catch {
+        return { 
+          success: false, 
+          message: "Please enter a valid website URL" 
+        };
+      }
+    }
 
-      // Create employer profile
-      await tx.insert(employers).values({
-        id: employerId,
-        userId: data.userId,
-        companyName: data.companyName.trim(),
-        companyDescription: data.companyDescription.trim() || null,
-        industry: data.industry,
-        companySize: data.companySize,
-        website: data.website.trim() || null,
-        address: data.address.trim() || null,
-        contactPerson: data.contactPerson.trim() || null,
-        contactEmail: data.contactEmail.trim(),
-        contactPhone: data.contactPhone.trim() || null,
-        isVerified: false, // Admin can verify later
-      });
+    // Generate employer ID
+    const employerId = `emp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+    // Create employer profile (role should already be set correctly)
+    await db.insert(employers).values({
+      id: employerId,
+      userId: data.userId,
+      companyName: data.companyName.trim(),
+      companyDescription: data.companyDescription?.trim() || null,
+      industry: data.industry,
+      companySize: data.companySize,
+      website: data.website?.trim() || null,
+      address: data.address?.trim() || null,
+      contactPerson: data.contactPerson?.trim() || null,
+      contactEmail: data.contactEmail.trim(),
+      contactPhone: data.contactPhone?.trim() || null,
+      isVerified: false, // Admin can verify later
     });
 
     // Revalidate cache

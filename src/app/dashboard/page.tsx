@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Calendar, MapPin, Users, Briefcase, FileText } from "lucide-react";
 import { CVDownloadButton } from "@/components/cv-download-button";
 import Image from "next/image";
+import db from "@/db/drizzle";
+import { employers } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -18,7 +21,20 @@ export default async function DashboardPage() {
   
   // Handle different user roles
   if (userProfile?.role === "employer") {
-    redirect("/employer");
+    // Check if employer has completed their profile
+    const employerProfile = await db
+      .select()
+      .from(employers)
+      .where(eq(employers.userId, session.user.id))
+      .limit(1);
+    
+    if (!employerProfile[0]) {
+      // Employer doesn't have a profile, redirect to setup
+      redirect("/employer/setup");
+    } else {
+      // Employer has profile, redirect to dashboard
+      redirect("/employer");
+    }
   }
   
   if (userProfile?.role === "admin") {
@@ -200,75 +216,71 @@ export default async function DashboardPage() {
             </Card>
           )}
 
-          {/* CV Section */}
-          {userProfile.jobSeeker?.cvUrl && (
-            <Card className="mb-8 border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-green-50/30 dark:from-slate-800 dark:to-green-900/20 hover:scale-[1.01]">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-green-600" />
-                  </div>
-                  Your CV
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200/50 dark:border-green-800/30">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-xl flex items-center justify-center shadow-sm">
-                      <FileText className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-green-800 dark:text-green-200 text-lg">
-                        CV Uploaded Successfully
-                      </p>
-                      <p className="text-sm text-green-600 dark:text-green-300">
-                        Ready for employer review
-                      </p>
-                    </div>
-                  </div>
-                  <CVDownloadButton cvUrl={userProfile.jobSeeker.cvUrl} />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Important Notes */}
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-yellow-50/30 dark:from-slate-800 dark:to-yellow-900/20 hover:scale-[1.01]">
+          {/* Documents Section */}
+          <Card className="mb-8 border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-800 dark:to-slate-700/50 hover:scale-[1.01]">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-yellow-600" />
+              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                <div className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-slate-600" />
                 </div>
-                Important Reminders
+                Your Documents
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-yellow-700 dark:text-yellow-300">
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/20 dark:to-amber-950/20 rounded-lg p-4 border border-yellow-200/50 dark:border-yellow-800/30">
-                <ul className="space-y-3">
-                  <li className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Keep your ticket number and PIN secure</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Arrive 30 minutes early for registration</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Bring multiple copies of your CV</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Dress professionally for interviews</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Check your email for updates and interview schedules</span>
-                  </li>
-                </ul>
+            <CardContent>
+              <div className="space-y-4">
+                {userProfile.jobSeeker?.cvUrl && (
+                  <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-slate-700/30 rounded-lg border border-slate-200/50 dark:border-slate-600/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">Curriculum Vitae</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Ready for employers to view</p>
+                      </div>
+                    </div>
+                    <CVDownloadButton 
+                      cvUrl={userProfile.jobSeeker.cvUrl} 
+                      candidateName={userProfile.name}
+                    />
+                  </div>
+                )}
+                
+                {userProfile.jobSeeker?.additionalDocuments && userProfile.jobSeeker.additionalDocuments.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">Additional Documents</h4>
+                    {userProfile.jobSeeker.additionalDocuments.map((doc: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-white/50 dark:bg-slate-700/30 rounded-lg border border-slate-200/50 dark:border-slate-600/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <FileText className="w-4 h-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-800 dark:text-slate-200">{doc.type}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">{doc.name}</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          Uploaded
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Footer */}
+          <div className="text-center py-8">
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
+              Looking forward to seeing you at the Nation-Huawei Career Summit!
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-500">
+              <CheckCircle className="w-4 h-4" />
+              <span>You&apos;re all set for the event</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

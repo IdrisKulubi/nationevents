@@ -1,6 +1,5 @@
 import NextAuth, { DefaultSession } from "next-auth";
 import Google from "next-auth/providers/google";
-import Spotify from "next-auth/providers/spotify";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import db from "@/db/drizzle";
@@ -36,10 +35,6 @@ export const {
           response_type: "code",
         },
       },
-    }),
-    Spotify({
-      clientId: process.env.SPOTIFY_CLIENT_ID!,
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
     }),
   ],
   adapter: DrizzleAdapter(db),
@@ -85,7 +80,7 @@ export const {
           }
         } catch (error) {
           console.error("Failed to fetch user role for token:", error);
-          token.role = "user"; // Default role on error
+          token.role = "job_seeker"; // Default role on error
         }
       }
       
