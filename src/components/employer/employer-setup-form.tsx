@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,6 @@ interface EmployerSetupFormProps {
   userId: string;
   userName: string;
   userEmail?: string;
-  isFromCompanyOnboard?: boolean;
-  roleWasUpdated?: boolean;
 }
 
 const industries = [
@@ -34,8 +32,8 @@ const companySizes = [
   { value: "enterprise", label: "Enterprise (1000+ employees)" },
 ];
 
-export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOnboard, roleWasUpdated }: EmployerSetupFormProps) {
-  const { data: session, update } = useSession();
+export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetupFormProps) {
+  const { update } = useSession();
   const [formData, setFormData] = useState({
     companyName: "",
     companyDescription: "",
@@ -51,18 +49,9 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSubmitting, startTransition] = useTransition();
 
-  // Force session update if role was changed
-  useEffect(() => {
-    if (roleWasUpdated) {
-      console.log("Role was updated, forcing session refresh");
-      update(); // This will trigger JWT token refresh
-    }
-  }, [roleWasUpdated, update]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (!formData.companyName || !formData.industry || !formData.companySize || !formData.contactEmail) {
       setResult({
         success: false,
@@ -89,20 +78,13 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
         setResult(response);
         
         if (response.success) {
-          // Force session update to refresh JWT token with latest role
-          console.log("Employer profile created successfully, updating session and redirecting");
+          console.log("[AUTH_FLOW] Profile created. Updating session and redirecting to /employer.");
           
-          if (response.shouldUpdateSession) {
-            await update(); // Force session refresh
-            
-            // Small delay to ensure session is updated, then redirect
-            setTimeout(() => {
-              window.location.href = "/employer";
-            }, 500);
-          } else {
-            // If no session update needed, redirect immediately
-            window.location.href = "/employer";
-          }
+          // Perform a final session update to ensure client-side state is fresh.
+          await update();
+          
+          // A hard redirect is best to ensure all state is cleared and re-fetched.
+          window.location.href = "/employer";
         }
       } catch (error) {
         setResult({

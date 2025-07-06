@@ -89,37 +89,51 @@ export const {
         token.isNewUser = true;
       }
 
-      // Force refresh user data when session is updated or on sign-in
-      if (user || trigger === "update") {
+      // Force refresh user data when session is updated, on sign-in, or periodically
+      const shouldRefreshRole = user || trigger === "update" || !token.role;
+      
+      // Also refresh if it's been more than 5 minutes since last update.
+      const lastUpdate = token.lastRoleUpdate as number || 0;
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      const shouldPeriodicRefresh = lastUpdate < fiveMinutesAgo;
+
+      if (shouldRefreshRole || shouldPeriodicRefresh) {
         try {
+          console.log("JWT: Refreshing user role from database", {
+            userId: user?.id || token.sub,
+            trigger,
+            shouldRefreshRole,
+            shouldPeriodicRefresh,
+            lastUpdate: lastUpdate > 0 ? new Date(lastUpdate).toISOString() : "Never"
+          });
+          
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, user?.id || token.sub!),
           });
+          
           if (dbUser) {
-            token.role = dbUser.role;
-            token.lastRoleUpdate = Date.now(); // Track when role was last updated
-          }
-        } catch (error) {
-          console.error("Failed to fetch user role for token:", error);
-          token.role = "job_seeker"; // Default role on error
-        }
-      }
-      
-      // Periodically refresh role from database (every 5 minutes)
-      const lastUpdate = token.lastRoleUpdate as number || 0;
-      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-      
-      if (lastUpdate < fiveMinutesAgo) {
-        try {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, token.sub!),
-          });
-          if (dbUser) {
+            const oldRole = token.role;
             token.role = dbUser.role;
             token.lastRoleUpdate = Date.now();
+            
+            if (oldRole !== dbUser.role) {
+              console.log("JWT: Role changed detected", {
+                userId: token.sub,
+                oldRole,
+                newRole: dbUser.role,
+                timestamp: new Date().toISOString()
+              });
+            }
+          } else {
+            console.warn("JWT: User not found in database", { userId: user?.id || token.sub });
+            token.role = "job_seeker"; // Default role if user not found
           }
         } catch (error) {
-          console.error("Failed to refresh user role:", error);
+          console.error("JWT: Failed to fetch user role for token:", error);
+          // Keep existing role if database is unreachable
+          if (!token.role) {
+            token.role = "job_seeker"; // Default role only if no existing role
+          }
         }
       }
       
