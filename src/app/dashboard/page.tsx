@@ -10,21 +10,12 @@ import db from "@/db/drizzle";
 import { employers, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function DashboardPage() {
   const session = await auth();
   
   if (!session?.user) {
     redirect("/login");
   }
-
-  // Check if user is coming from company onboard flow
-  const params = await searchParams;
-  const fromCompanyOnboard = params?.from === "company-onboard";
-  const roleParam = params?.role;
 
   let userProfile;
   try {
@@ -33,11 +24,6 @@ export default async function DashboardPage({
     console.error("Dashboard: Error fetching user profile:", error);
     // If we can't fetch profile, redirect to profile setup to be safe
     redirect("/profile-setup");
-  }
-  
-  // If user is coming from company onboard, redirect to employer setup regardless of current role
-  if (fromCompanyOnboard || roleParam === "employer") {
-    redirect("/employer/setup?from=company-onboard");
   }
   
   // Handle different user roles

@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Building2, Users } from "lucide-react";
-import Link from "next/link";
+import { CompanyGoogleLogin } from "./company-google-login";
 
 export function LoginCard() {
   const handleGoogleSignIn = () => {
@@ -52,12 +52,7 @@ export function LoginCard() {
           <p className="text-sm text-muted-foreground mb-3">
             Are you an employer looking to register your company?
           </p>
-          <Link href="/company-onboard">
-            <Button variant="outline" className="w-full">
-              <Building2 className="h-4 w-4 mr-2" />
-              Company Registration
-            </Button>
-          </Link>
+          <CompanyGoogleLogin />
         </div>
         
         <p className="px-8 text-center text-sm text-muted-foreground">
