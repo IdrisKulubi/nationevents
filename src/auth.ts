@@ -3,7 +3,8 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import db from "@/db/drizzle";
-import { users, jobSeekers } from "../db/schema";
+import { users, jobSeekers, employers } from "../db/schema";
+import { cookies } from "next/headers";
 
 declare module "next-auth" {
   interface Session {
@@ -60,46 +61,35 @@ export const {
         return url;
       }
       
-      // For all other cases, default to a safe dashboard page.
-      console.log("[AUTH_FLOW] Defaulting to dashboard redirect.");
-      return `${baseUrl}/dashboard`;
+      // For all other cases, let middleware handle the routing
+      console.log("[AUTH_FLOW] Defaulting to root, middleware will handle routing.");
+      return `${baseUrl}/`;
     },
     async jwt({ token, user, trigger, account }) {
-      // On initial sign-in, persist the user's role and ID to the token.
-      if (user) {
-        token.sub = user.id; // Ensure 'sub' is set to the user's database ID
-        
-        console.log("JWT: Initial sign-in or user object available.", { userId: user.id, trigger });
-        
-        // WORKAROUND: Fetch user and profile in two steps to avoid Drizzle 'relations' issue.
-        try {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, user.id!),
-          });
+      // On initial sign-in, check for and handle employer intent
+      if (user && account) { // This block only runs on sign-in
+        token.sub = user.id;
+        const cookieStore = await cookies();
+        const intentCookie = cookieStore.get("auth_intent");
 
-          if (dbUser) {
-            token.role = dbUser.role;
-            const jobSeekerProfile = await db.query.jobSeekers.findFirst({
-              where: eq(jobSeekers.userId, dbUser.id),
-            });
-            token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
-            console.log("JWT: User data fetched on sign-in.", { role: token.role, profileCompleted: token.profileCompleted });
-          } else {
-            console.warn("JWT: User not found in database during initial sign-in.", { userId: user.id });
-            token.role = 'job_seeker'; // Default role
-            token.profileCompleted = false;
+        if (intentCookie?.value === "employer") {
+          console.log("JWT: Employer intent detected. Updating role.", { userId: user.id });
+          try {
+            await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id!));
+            // Clean up the cookie immediately after use
+            cookieStore.delete("auth_intent");
+          } catch (error) {
+            console.error("JWT: Failed to update user role to employer.", error);
           }
-        } catch (error) {
-          console.error("JWT: Error fetching user on sign-in.", error);
-          token.role = 'job_seeker';
-          token.profileCompleted = false;
         }
       }
 
-      // Handle session updates, e.g., after profile completion or role change
-      if (trigger === "update") {
-        console.log("JWT: 'update' trigger received. Refreshing token data from DB.", { userId: token.sub });
-        // WORKAROUND: Fetch user and profile in two steps to avoid Drizzle 'relations' issue.
+      // This logic runs on sign-in AND on session updates.
+      // We need to ensure we have the most up-to-date user info in the token.
+      const shouldRefresh = user || trigger === "update";
+
+      if (shouldRefresh) {
+        console.log("JWT: Refreshing token data from DB.", { userId: token.sub, trigger });
         try {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, token.sub!),
@@ -107,20 +97,30 @@ export const {
 
           if (dbUser) {
             token.role = dbUser.role;
-            const jobSeekerProfile = await db.query.jobSeekers.findFirst({
-              where: eq(jobSeekers.userId, dbUser.id),
-            });
-            token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
-            console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
+
+            // Check profile completion based on role
+            if (dbUser.role === 'employer') {
+              const employerProfile = await db.query.employers.findFirst({
+                where: eq(employers.userId, dbUser.id),
+              });
+              // An employer profile is complete if it exists and has a company name.
+              token.profileCompleted = !!(employerProfile?.id && employerProfile?.companyName);
+            } else { // 'job_seeker' or other default roles
+              const jobSeekerProfile = await db.query.jobSeekers.findFirst({
+                where: eq(jobSeekers.userId, dbUser.id),
+              });
+              // A job seeker profile is complete if it exists and has a CV.
+              token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
+            }
+             console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
           } else {
-             console.warn("JWT: User not found during 'update' trigger.", { userId: token.sub });
+            console.warn("JWT: User not found during refresh.", { userId: token.sub });
           }
         } catch (error) {
-          console.error("JWT: Error refreshing token on 'update' trigger.", error);
-          // Avoid overwriting existing token data if DB fails
+          console.error("JWT: Error refreshing token data.", error);
         }
       }
-
+      
       return token;
     },
     async session({ session, token }) {
