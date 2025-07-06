@@ -200,17 +200,7 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         .limit(1);
 
       if (jobSeekerProfile.length > 0 && user.phoneNumber) {
-        await sendTwilioWelcomeSMS({
-          phoneNumber: user.phoneNumber,
-          name: data.fullName,
-          pin: pin,
-          ticketNumber: ticketNumber,
-          eventDetails: {
-            name: "Huawei Career Summit",
-            date: "July 8th, 2025",
-            venue: "UON Graduation Square, Nairobi",
-          }
-        });
+        await sendTwilioWelcomeSMS(jobSeekerProfile[0].id);
       }
     }
 
