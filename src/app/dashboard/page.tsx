@@ -74,8 +74,14 @@ export default async function DashboardPage({
     console.log("Dashboard: User profile incomplete, redirecting to profile setup", {
       profileComplete: userProfile?.profileComplete,
       hasCvUrl: !!userProfile?.jobSeeker?.cvUrl,
+      hasJobSeekerRecord: !!userProfile?.jobSeeker?.id,
       userId: session.user.id
     });
+    
+    // Add a small delay to allow any ongoing session updates to complete
+    // This helps prevent redirect loops during profile creation
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     redirect("/profile-setup");
   }
 

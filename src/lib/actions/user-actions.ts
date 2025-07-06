@@ -84,7 +84,8 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
           data: {
             pin: existingJobSeeker.pin,
             ticketNumber: existingJobSeeker.ticketNumber,
-          }
+          },
+          shouldUpdateSession: true // Flag to trigger session update
         };
       }
       
@@ -96,7 +97,8 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         data: {
           pin: existingJobSeeker.pin,
           ticketNumber: existingJobSeeker.ticketNumber,
-        }
+        },
+        shouldUpdateSession: true // Flag to trigger session update
       };
     }
 
@@ -198,22 +200,17 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         .limit(1);
 
       if (jobSeekerProfile.length > 0 && user.phoneNumber) {
-        try {
-          console.log(`📱 Sending welcome SMS to job seeker: ${jobSeekerProfile[0].id}`);
-          const smsResult = await sendTwilioWelcomeSMS(jobSeekerProfile[0].id);
-          
-          if (smsResult.success) {
-            console.log(`✅ Welcome SMS sent successfully: ${smsResult.messageId}`);
-          } else {
-            console.error("❌ Failed to send welcome SMS:", smsResult.error);
-            // Continue without failing the registration
+        await sendTwilioWelcomeSMS({
+          phoneNumber: user.phoneNumber,
+          name: data.fullName,
+          pin: pin,
+          ticketNumber: ticketNumber,
+          eventDetails: {
+            name: "Huawei Career Summit",
+            date: "July 8th, 2025",
+            venue: "UON Graduation Square, Nairobi",
           }
-        } catch (error: any) {
-          console.error("❌ Error sending welcome SMS:", error);
-          // Continue without failing the registration
-        }
-      } else {
-        console.warn("⚠️ Cannot send SMS: Job seeker profile not found or phone number missing");
+        });
       }
     }
 
@@ -221,9 +218,10 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
       success: true,
       message: "Profile created successfully",
       data: {
-        pin,
-        ticketNumber,
-      }
+        pin: pin,
+        ticketNumber: ticketNumber,
+      },
+      shouldUpdateSession: true // Flag to trigger session update
     };
 
   } catch (error) {

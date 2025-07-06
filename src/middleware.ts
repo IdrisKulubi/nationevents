@@ -12,7 +12,6 @@ const publicRoutes = [
   '/api/auth',
   '/api/sentry-example-api',
   '/sentry-example-page',
-  '/debug-auth',
 ];
 
 export async function middleware(request: NextRequest) {
