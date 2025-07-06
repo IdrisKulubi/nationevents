@@ -63,9 +63,19 @@ export async function middleware(request: NextRequest) {
       // Allow access if user is employer OR if they're coming from company onboard
       // This prevents redirect loops during role transitions
       if (userRole !== 'employer' && !fromCompanyOnboard) {
-        console.log("Middleware: Non-employer accessing setup without company onboard flag");
+        console.log("Middleware: Non-employer accessing setup without company onboard flag", {
+          userRole,
+          fromCompanyOnboard,
+          pathname
+        });
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
+      
+      console.log("Middleware: Allowing access to employer setup", {
+        userRole,
+        fromCompanyOnboard,
+        pathname
+      });
       
       // Allow the request to proceed to setup page
       return NextResponse.next();
@@ -76,10 +86,19 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // Other employer routes (not setup) - stricter checking
+    // Other employer routes (not setup) - more lenient checking during transitions
     if (pathname.startsWith('/employer/') && pathname !== '/employer/setup') {
-      if (userRole !== 'employer' && userRole !== 'admin') {
-        console.log("Middleware: Non-employer accessing employer routes");
+      // Allow admin access
+      if (userRole === 'admin') {
+        return NextResponse.next();
+      }
+      
+      // For non-admin, non-employer users, redirect to dashboard
+      if (userRole !== 'employer') {
+        console.log("Middleware: Non-employer accessing employer routes", {
+          userRole,
+          pathname
+        });
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
