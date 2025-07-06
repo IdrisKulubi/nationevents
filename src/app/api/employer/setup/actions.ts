@@ -105,7 +105,8 @@ export async function createEmployerProfile(data: EmployerProfileData) {
       success: true, 
       message: `Welcome to the platform, ${data.companyName}! Redirecting to your dashboard...`,
       employerId,
-      shouldUpdateSession: true // Flag to trigger session update
+      shouldUpdateSession: true, // Flag to trigger session update
+      profileCompleted: true // Indicate profile is now complete
     };
 
   } catch (error) {
