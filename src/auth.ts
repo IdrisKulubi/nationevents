@@ -47,8 +47,11 @@ export const {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
+      console.log("Auth redirect callback:", { url, baseUrl });
+      
       // Handle company onboard flow - preserve search params
       if (url.includes('from=company-onboard') || url.includes('role=employer')) {
+        console.log("Company onboard flow detected, redirecting to employer setup");
         if (url.includes('/employer/setup')) {
           return url.startsWith('/') ? `${baseUrl}${url}` : url;
         }
@@ -58,17 +61,25 @@ export const {
       
       // Allow direct access to employer setup (for company onboard flow)
       if (url.includes('/employer/setup')) {
+        console.log("Direct employer setup access");
         return url.startsWith('/') ? `${baseUrl}${url}` : url;
       }
       
       // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith("/")) {
+        console.log("Relative callback URL:", url);
+        return `${baseUrl}${url}`;
+      }
       // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
+      else if (new URL(url).origin === baseUrl) {
+        console.log("Same origin callback URL:", url);
+        return url;
+      }
       // Default redirect to dashboard
+      console.log("Default redirect to dashboard");
       return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, account, user, trigger }) {
+    async jwt({ token, account, user, trigger, session }) {
       if (account) {
         token.provider = account.provider;
       }
@@ -78,18 +89,37 @@ export const {
         token.isNewUser = true;
       }
 
-      // On sign-in or when token is new, fetch role from DB and add to token
-      if (user) {
+      // Force refresh user data when session is updated or on sign-in
+      if (user || trigger === "update") {
         try {
           const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, user.id!),
+            where: eq(users.id, user?.id || token.sub!),
           });
           if (dbUser) {
             token.role = dbUser.role;
+            token.lastRoleUpdate = Date.now(); // Track when role was last updated
           }
         } catch (error) {
           console.error("Failed to fetch user role for token:", error);
           token.role = "job_seeker"; // Default role on error
+        }
+      }
+      
+      // Periodically refresh role from database (every 5 minutes)
+      const lastUpdate = token.lastRoleUpdate as number || 0;
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      
+      if (lastUpdate < fiveMinutesAgo) {
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.sub!),
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.lastRoleUpdate = Date.now();
+          }
+        } catch (error) {
+          console.error("Failed to refresh user role:", error);
         }
       }
       
@@ -120,7 +150,8 @@ export const {
             session.user.hasProfile = true;
             // The role from the DB is the source of truth, but token is a good fallback
             session.user.role = profile.user.role || token.role as string | undefined;
-            session.user.profileCompleted = !!profile.jobSeeker?.id;
+            // More robust profile completion check
+            session.user.profileCompleted = !!(profile.jobSeeker?.id && profile.jobSeeker?.cvUrl);
           } else {
             session.user.hasProfile = false;
             session.user.profileCompleted = false;
@@ -135,7 +166,8 @@ export const {
           console.error("Error details:", {
             message: errorMessage,
             code: errorCode,
-            name: errorName
+            name: errorName,
+            userId: token.sub
           });
           
           // Set default values when database is unreachable

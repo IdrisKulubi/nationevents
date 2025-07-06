@@ -26,7 +26,14 @@ export default async function DashboardPage({
   const fromCompanyOnboard = params?.from === "company-onboard";
   const roleParam = params?.role;
 
-  const userProfile = await getUserProfile(session.user.id!);
+  let userProfile;
+  try {
+    userProfile = await getUserProfile(session.user.id!);
+  } catch (error) {
+    console.error("Dashboard: Error fetching user profile:", error);
+    // If we can't fetch profile, redirect to profile setup to be safe
+    redirect("/profile-setup");
+  }
   
   // If user is coming from company onboard, redirect to employer setup regardless of current role
   if (fromCompanyOnboard || roleParam === "employer") {
@@ -46,7 +53,7 @@ export default async function DashboardPage({
       // Employer doesn't have a profile, redirect to setup
       redirect("/employer/setup");
     } else {
-      // Employer has profile, redirect to dashboard
+      // Employer has profile, redirect to employer dashboard
       redirect("/employer");
     }
   }
@@ -59,8 +66,16 @@ export default async function DashboardPage({
     redirect("/security");
   }
   
-  // Only redirect job seekers to profile setup if they haven't completed their profile
-  if (!userProfile?.profileComplete) {
+  // More robust profile completion check for job seekers
+  // Check both profileComplete flag AND actual CV URL existence
+  const hasCompleteProfile = userProfile?.profileComplete && userProfile?.jobSeeker?.cvUrl;
+  
+  if (!hasCompleteProfile) {
+    console.log("Dashboard: User profile incomplete, redirecting to profile setup", {
+      profileComplete: userProfile?.profileComplete,
+      hasCvUrl: !!userProfile?.jobSeeker?.cvUrl,
+      userId: session.user.id
+    });
     redirect("/profile-setup");
   }
 
@@ -94,7 +109,7 @@ export default async function DashboardPage({
               </span>
               <br />
               <span className=" bg-clip-text text-red-500">
-                {userProfile.name}!
+                {userProfile?.name}!
               </span>
             </h1>
             
@@ -124,7 +139,7 @@ export default async function DashboardPage({
                       Ticket Number
                     </p>
                     <p className="text-2xl font-bold text-green-700 dark:text-green-300 font-mono tracking-wider">
-                      {userProfile.jobSeeker?.ticketNumber}
+                      {userProfile?.jobSeeker?.ticketNumber}
                     </p>
                   </div>
                 </div>
@@ -132,21 +147,21 @@ export default async function DashboardPage({
                 <div className="space-y-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Email:</span>
-                    <span className="text-slate-800 dark:text-slate-200">{userProfile.email}</span>
+                    <span className="text-slate-800 dark:text-slate-200">{userProfile?.email}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Phone:</span>
-                    <span className="text-slate-800 dark:text-slate-200">{userProfile.phoneNumber}</span>
+                    <span className="text-slate-800 dark:text-slate-200">{userProfile?.phoneNumber}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Status:</span>
                     <Badge 
-                      variant={userProfile.jobSeeker?.registrationStatus === 'approved' ? 'default' : 'secondary'}
-                      className={`${userProfile.jobSeeker?.registrationStatus === 'approved' 
+                      variant={userProfile?.jobSeeker?.registrationStatus === 'approved' ? 'default' : 'secondary'}
+                      className={`${userProfile?.jobSeeker?.registrationStatus === 'approved' 
                         ? 'bg-green-500 hover:bg-green-600 text-white' 
                         : 'bg-orange-100 text-orange-800 hover:bg-orange-200'}`}
                     >
-                      {userProfile.jobSeeker?.registrationStatus || 'pending'}
+                      {userProfile?.jobSeeker?.registrationStatus || 'pending'}
                     </Badge>
                   </div>
                 </div>
@@ -199,7 +214,7 @@ export default async function DashboardPage({
           </div>
 
           {/* Career Interests */}
-          {userProfile.jobSeeker?.interestCategories && (
+          {userProfile?.jobSeeker?.interestCategories && (
             <Card className="mb-8 border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 hover:scale-[1.01]">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
@@ -211,7 +226,7 @@ export default async function DashboardPage({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-3">
-                  {userProfile.jobSeeker.interestCategories.map((category: string, index: number) => (
+                  {userProfile?.jobSeeker.interestCategories.map((category: string, index: number) => (
                     <Badge 
                       key={category} 
                       variant="outline" 
@@ -242,7 +257,7 @@ export default async function DashboardPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {userProfile.jobSeeker?.cvUrl && (
+                {userProfile?.jobSeeker?.cvUrl && (
                   <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-slate-700/30 rounded-lg border border-slate-200/50 dark:border-slate-600/30">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -254,16 +269,16 @@ export default async function DashboardPage({
                       </div>
                     </div>
                     <CVDownloadButton 
-                      cvUrl={userProfile.jobSeeker.cvUrl} 
-                      candidateName={userProfile.name}
+                      cvUrl={userProfile?.jobSeeker?.cvUrl} 
+                      candidateName={userProfile?.name}
                     />
                   </div>
                 )}
                 
-                {userProfile.jobSeeker?.additionalDocuments && userProfile.jobSeeker.additionalDocuments.length > 0 && (
+                {userProfile?.jobSeeker?.additionalDocuments && userProfile?.jobSeeker?.additionalDocuments.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-semibold text-slate-800 dark:text-slate-200">Additional Documents</h4>
-                    {userProfile.jobSeeker.additionalDocuments.map((doc: any, index: number) => (
+                    {userProfile?.jobSeeker?.additionalDocuments.map((doc: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-white/50 dark:bg-slate-700/30 rounded-lg border border-slate-200/50 dark:border-slate-600/30">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">

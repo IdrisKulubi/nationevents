@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { getUserProfile } from "@/lib/actions/user-actions";
 import type { NextRequest } from "next/server";
 
 // Define public routes that don't need authentication
@@ -13,6 +12,7 @@ const publicRoutes = [
   '/api/auth',
   '/api/sentry-example-api',
   '/sentry-example-page',
+  '/debug-auth',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -34,12 +34,17 @@ export async function middleware(request: NextRequest) {
       pathname === route || pathname.startsWith(`${route}/`)
     );
 
-    // Get session for auth-protected routes (only if not a public route)
-    const session = !isPublicRoute ? await auth() : null;
-
     if (isPublicRoute) {
       return NextResponse.next();
     }
+
+    // Get session for auth-protected routes with timeout
+    const session = await Promise.race([
+      auth(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth timeout')), 8000) // Increased timeout
+      )
+    ]) as any;
 
     // Redirect unauthenticated users to login
     if (!session?.user) {
@@ -48,33 +53,35 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Profile completion checks are handled by individual pages
-    // This avoids issues with cached session data not reflecting latest profile status
-
-    // Role-based access control
+    // Role-based access control using session data (no additional DB calls)
     const userRole = session.user.role;
+    
+    // Special handling for employer setup flow to prevent redirect loops
+    if (pathname.startsWith('/employer/setup')) {
+      const { searchParams } = request.nextUrl;
+      const fromCompanyOnboard = searchParams.get('from') === 'company-onboard';
+      
+      // Allow access if user is employer OR if they're coming from company onboard
+      // This prevents redirect loops during role transitions
+      if (userRole !== 'employer' && !fromCompanyOnboard) {
+        console.log("Middleware: Non-employer accessing setup without company onboard flag");
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+      
+      // Allow the request to proceed to setup page
+      return NextResponse.next();
+    }
     
     // Admin routes
     if (pathname.startsWith('/admin/') && userRole !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // Employer routes - Allow access to employer setup during company onboard flow
-    if (pathname.startsWith('/employer/')) {
-      // Allow access to employer setup if coming from company onboard or user is employer
-      if (pathname === '/employer/setup' || pathname.startsWith('/employer/setup?')) {
-        const { searchParams } = request.nextUrl;
-        const fromCompanyOnboard = searchParams.get('from') === 'company-onboard';
-        
-        // Allow access if user is employer OR if they're coming from company onboard
-        if (userRole !== 'employer' && !fromCompanyOnboard) {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
-      } else {
-        // For other employer routes, user must have employer role
-        if (userRole !== 'employer') {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
+    // Other employer routes (not setup) - stricter checking
+    if (pathname.startsWith('/employer/') && pathname !== '/employer/setup') {
+      if (userRole !== 'employer' && userRole !== 'admin') {
+        console.log("Middleware: Non-employer accessing employer routes");
+        return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
 
@@ -102,9 +109,18 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error);
     
-    // Fallback to allow request if middleware fails
+    // Handle specific timeout errors
+    if (error instanceof Error && error.message === 'Auth timeout') {
+      console.error('Auth timeout in middleware - redirecting to login');
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // For other errors, allow the request to continue but log the error
     const response = NextResponse.next();
     response.headers.set('X-Middleware-Error', 'true');
+    response.headers.set('X-Error-Type', error instanceof Error ? error.name : 'Unknown');
     return response;
   }
 }

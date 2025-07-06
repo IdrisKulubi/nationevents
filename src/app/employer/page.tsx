@@ -51,6 +51,12 @@ export default async function EmployerDashboard() {
       .where(eq(employers.userId, session.user.id))
       .limit(1);
 
+    // If no employer profile and user is not admin, redirect to setup
+    if (!employerProfile[0] && currentUser.role !== "admin") {
+      console.log("No employer profile found for non-admin user, redirecting to setup");
+      redirect("/employer/setup");
+    }
+
     // For admin users without employer profile, create a mock employer
     const employer = employerProfile[0] || {
       id: "admin_mock_employer",
