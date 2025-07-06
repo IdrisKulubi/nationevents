@@ -80,11 +80,19 @@ export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetup
         if (response.success) {
           console.log("[AUTH_FLOW] Profile created. Updating session and redirecting to /employer.");
           
-          // Perform a final session update to ensure client-side state is fresh.
-          await update();
+          // Force a complete session refresh by triggering JWT update
+          try {
+            await update({ trigger: "update" });
+            console.log("[AUTH_FLOW] Session updated successfully");
+          } catch (error) {
+            console.error("[AUTH_FLOW] Session update failed:", error);
+          }
           
-          // A hard redirect is best to ensure all state is cleared and re-fetched.
-          window.location.href = "/employer";
+          // Wait a moment for the session to update, then do a hard redirect
+          setTimeout(() => {
+            console.log("[AUTH_FLOW] Redirecting to /employer");
+            window.location.href = "/employer";
+          }, 1500);
         }
       } catch (error) {
         setResult({
