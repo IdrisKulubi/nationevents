@@ -4,8 +4,8 @@ import { users, jobSeekers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateSecurePin, generateTicketNumber } from "@/lib/utils/security";
 import { sendWelcomeEmail } from "@/lib/utils/notifications";
-import { sendWelcomeSMS as sendTwilioWelcomeSMS } from "@/lib/actions/send-sms-actions";
 import { auth } from "@/lib/auth";
+import crypto from "crypto";
 
 interface CreateJobSeekerProfileData {
   userId: string;
@@ -46,51 +46,30 @@ interface CreateJobSeekerProfileData {
 }
 
 export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.id !== data.userId) {
+    throw new Error("Unauthorized");
+  }
+
   try {
-    // Debug: Log the incoming data to see what we're receiving
-    console.log("🔍 CreateJobSeekerProfile received data:", {
-      userId: data.userId,
-      fullName: data.fullName,
-      skills: data.skills,
-      expectedSalary: data.expectedSalary,
-      skillsType: typeof data.skills,
-      expectedSalaryType: typeof data.expectedSalary,
-    });
-
-    // Debug: Log the incoming data to see what we're receiving
-    console.log("🔍 CreateJobSeekerProfile received data:", {
-      userId: data.userId,
-      fullName: data.fullName,
-      skills: data.skills,
-      expectedSalary: data.expectedSalary,
-      skillsType: typeof data.skills,
-      expectedSalaryType: typeof data.expectedSalary,
-    });
-
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("Unauthorized");
-    }
-
-    // Check if profile already exists
-    const existingProfile = await db
-      .select()
-      .from(jobSeekers)
-      .where(eq(jobSeekers.userId, data.userId))
-      .limit(1);
-
-    if (existingProfile.length > 0) {
-      throw new Error("Profile already exists for this user");
-    }
-
-    // Generate PIN and ticket number
     const pin = generateSecurePin();
     const ticketNumber = generateTicketNumber();
-    const pinExpirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    const pinExpirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Start transaction
-    await db.transaction(async (tx: any) => {
-      // Update user table with basic info
+    await db.transaction(async (tx) => {
+      // 1. Check if a profile already exists for this user within the transaction
+      const existingProfile = await tx
+        .select({ id: jobSeekers.id })
+        .from(jobSeekers)
+        .where(eq(jobSeekers.userId, data.userId))
+        .limit(1);
+
+      if (existingProfile.length > 0) {
+        // This will cause the transaction to rollback
+        throw new Error("Profile already exists for this user.");
+      }
+      
+      // 2. Update user table
       await tx
         .update(users)
         .set({
@@ -101,117 +80,70 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         })
         .where(eq(users.id, data.userId));
 
-      // Validate and process expectedSalary
+      // 3. Process salary
       let processedExpectedSalary = null;
       if (data.expectedSalary && data.expectedSalary.trim()) {
-        // Try to extract numeric value from salary string
-        const salaryMatch = data.expectedSalary.replace(/[^\d.-]/g, '');
+        const salaryMatch = data.expectedSalary.replace(/[^\\d.-]/g, '');
         if (salaryMatch && !isNaN(parseFloat(salaryMatch))) {
           processedExpectedSalary = salaryMatch;
         }
       }
 
-      // Create job seeker profile
-      await tx
-        .insert(jobSeekers)
-        .values({
-          id: crypto.randomUUID(),
-          userId: data.userId,
-          bio: data.bio,
-          cvUrl: data.cvUrl,
-          additionalDocuments: data.additionalDocuments || [],
-          skills: data.skills,
-          experience: data.experienceLevel,
-          education: data.educationLevel,
-          pin: pin,
-          ticketNumber: ticketNumber,
-          registrationStatus: "pending",
-          interestCategories: data.interestCategories,
-          linkedinUrl: data.linkedinUrl || null,
-          portfolioUrl: data.portfolioUrl || null,
-          expectedSalary: processedExpectedSalary,
-          availableFrom: new Date(data.availableFrom),
-          pinGeneratedAt: new Date(),
-          pinExpiresAt: pinExpirationTime,
-          // Huawei student fields
-          isHuaweiStudent: data.isHuaweiStudent || false,
-          huaweiStudentId: null, // No longer collecting student ID
-          huaweiCertificationLevel: data.huaweiCertificationLevel || null,
-          huaweiCertificationDetails: data.huaweiCertificationDetails ? 
-            [{ details: data.huaweiCertificationDetails, addedAt: new Date().toISOString() }] : null,
-          // Conference fields
-          wantsToAttendConference: data.wantsToAttendConference || false,
-          conferenceRegistrationDate: data.wantsToAttendConference ? new Date() : null,
-          conferenceAttendanceStatus: data.wantsToAttendConference ? "registered" : null,
-          conferencePreferences: data.wantsToAttendConference ? {
-            sessionInterests: data.conferenceSessionInterests || [],
-            dietaryRequirements: data.conferenceDietaryRequirements || "",
-            accessibilityNeeds: data.conferenceAccessibilityNeeds || ""
-          } : null,
-          // Data privacy fields
-          dataPrivacyAccepted: data.dataPrivacyAccepted,
-          dataPrivacyAcceptedAt: data.dataPrivacyAcceptedAt,
-          dataRetentionPeriod: "1_year",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-    });
-
-    // Send notifications
-    const user = await getUserById(data.userId);
-    if (user) {
-      // Send welcome email with PIN
-      await sendWelcomeEmail({
-        email: user.email,
-        name: data.fullName,
+      // 4. Create the new job seeker profile
+      await tx.insert(jobSeekers).values({
+        id: crypto.randomUUID(),
+        userId: data.userId,
+        bio: data.bio,
+        cvUrl: data.cvUrl,
+        additionalDocuments: data.additionalDocuments || [],
+        skills: data.skills,
+        experience: data.experienceLevel,
+        education: data.educationLevel,
         pin: pin,
         ticketNumber: ticketNumber,
-        eventDetails: {
-          name: "Huawei Career Summit",
-          date: "July 8th, 2025",
-          venue: "UON Graduation Square, Nairobi",
-        }
-      });
+        registrationStatus: "pending",
+        interestCategories: data.interestCategories,
+        linkedinUrl: data.linkedinUrl || null,
+        portfolioUrl: data.portfolioUrl || null,
+        expectedSalary: processedExpectedSalary,
+        availableFrom: new Date(data.availableFrom),
+        pinGeneratedAt: new Date(),
+        pinExpiresAt: pinExpirationTime,
+        isHuaweiStudent: data.isHuaweiStudent || false,
+        huaweiStudentId: null,
+        huaweiCertificationLevel: data.huaweiCertificationLevel || null,
+        huaweiCertificationDetails: data.huaweiCertificationDetails ? 
+          [{ details: data.huaweiCertificationDetails, addedAt: new Date().toISOString() }] : null,
+        wantsToAttendConference: data.wantsToAttendConference || false,
+        conferenceRegistrationDate: data.wantsToAttendConference ? new Date() : null,
+        conferenceAttendanceStatus: data.wantsToAttendConference ? "registered" : null,
+        conferencePreferences: data.wantsToAttendConference ? {
+          sessionInterests: data.conferenceSessionInterests || [],
+          dietaryRequirements: data.conferenceDietaryRequirements || "",
+          accessibilityNeeds: data.conferenceAccessibilityNeeds || ""
+        } : null,
+        dataPrivacyAccepted: data.dataPrivacyAccepted,
+        dataPrivacyAcceptedAt: data.dataPrivacyAcceptedAt,
+        dataRetentionPeriod: "1_year",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+    });
 
-      // Send welcome SMS with PIN using Twilio
-      const jobSeekerProfile = await db
-        .select()
-        .from(jobSeekers)
-        .where(eq(jobSeekers.userId, data.userId))
-        .limit(1);
-
-      if (jobSeekerProfile.length > 0 && user.phoneNumber) {
-        try {
-          console.log(`📱 Sending welcome SMS to job seeker: ${jobSeekerProfile[0].id}`);
-          const smsResult = await sendTwilioWelcomeSMS(jobSeekerProfile[0].id);
-          
-          if (smsResult.success) {
-            console.log(`✅ Welcome SMS sent successfully: ${smsResult.messageId}`);
-          } else {
-            console.error("❌ Failed to send welcome SMS:", smsResult.error);
-            // Continue without failing the registration
-          }
-        } catch (error: any) {
-          console.error("❌ Error sending welcome SMS:", error);
-          // Continue without failing the registration
-        }
-      } else {
-        console.warn("⚠️ Cannot send SMS: Job seeker profile not found or phone number missing");
-      }
-    }
+    // Send notifications post-transaction
+  
 
     return {
       success: true,
       message: "Profile created successfully",
-      data: {
-        pin,
-        ticketNumber,
-      }
+      data: { pin, ticketNumber }
     };
 
   } catch (error) {
     console.error("Error creating job seeker profile:", error);
-    console.log(error);
+    if (error instanceof Error && error.message.includes("Profile already exists")) {
+      return { success: false, message: error.message };
+    }
     throw new Error("Failed to create profile. Please try again.");
   }
 }
