@@ -64,11 +64,11 @@ export const {
         token.profileCompleted = user.profileCompleted;
         
         const cookieStore = cookies();
-        const intentCookie = cookieStore.get("auth_intent");
+        const intentCookie = (await cookieStore).get("auth_intent");
         if (intentCookie?.value === "employer") {
           await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id!));
           token.role = "employer";
-          cookieStore.delete("auth_intent");
+          (await cookieStore).delete("auth_intent");
         }
       }
       
