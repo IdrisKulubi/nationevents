@@ -46,18 +46,17 @@ interface CreateJobSeekerProfileData {
 }
 
 export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.id !== data.userId) {
-    throw new Error("Unauthorized");
-  }
-
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error("Unauthorized");
+    }
+
     const pin = generateSecurePin();
     const ticketNumber = generateTicketNumber();
     const pinExpirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await db.transaction(async (tx) => {
-      // 1. Check if a profile already exists for this user within the transaction
       const existingProfile = await tx
         .select({ id: jobSeekers.id })
         .from(jobSeekers)
@@ -65,11 +64,9 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         .limit(1);
 
       if (existingProfile.length > 0) {
-        // This will cause the transaction to rollback
-        throw new Error("Profile already exists for this user.");
+        throw new Error("Profile already exists for this user");
       }
-      
-      // 2. Update user table
+
       await tx
         .update(users)
         .set({
@@ -80,16 +77,14 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         })
         .where(eq(users.id, data.userId));
 
-      // 3. Process salary
       let processedExpectedSalary = null;
       if (data.expectedSalary && data.expectedSalary.trim()) {
-        const salaryMatch = data.expectedSalary.replace(/[^\\d.-]/g, '');
+        const salaryMatch = data.expectedSalary.replace(/[^\\d.-]/g, "");
         if (salaryMatch && !isNaN(parseFloat(salaryMatch))) {
           processedExpectedSalary = salaryMatch;
         }
       }
 
-      // 4. Create the new job seeker profile
       await tx.insert(jobSeekers).values({
         id: crypto.randomUUID(),
         userId: data.userId,
@@ -112,33 +107,75 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
         isHuaweiStudent: data.isHuaweiStudent || false,
         huaweiStudentId: null,
         huaweiCertificationLevel: data.huaweiCertificationLevel || null,
-        huaweiCertificationDetails: data.huaweiCertificationDetails ? 
-          [{ details: data.huaweiCertificationDetails, addedAt: new Date().toISOString() }] : null,
+        huaweiCertificationDetails: data.huaweiCertificationDetails
+          ? [{ details: data.huaweiCertificationDetails, addedAt: new Date().toISOString() }]
+          : null,
         wantsToAttendConference: data.wantsToAttendConference || false,
         conferenceRegistrationDate: data.wantsToAttendConference ? new Date() : null,
         conferenceAttendanceStatus: data.wantsToAttendConference ? "registered" : null,
-        conferencePreferences: data.wantsToAttendConference ? {
-          sessionInterests: data.conferenceSessionInterests || [],
-          dietaryRequirements: data.conferenceDietaryRequirements || "",
-          accessibilityNeeds: data.conferenceAccessibilityNeeds || ""
-        } : null,
+        conferencePreferences: data.wantsToAttendConference
+          ? {
+              sessionInterests: data.conferenceSessionInterests || [],
+              dietaryRequirements: data.conferenceDietaryRequirements || "",
+              accessibilityNeeds: data.conferenceAccessibilityNeeds || "",
+            }
+          : null,
         dataPrivacyAccepted: data.dataPrivacyAccepted,
         dataPrivacyAcceptedAt: data.dataPrivacyAcceptedAt,
         dataRetentionPeriod: "1_year",
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any);
+
     });
 
-    // Send notifications post-transaction
-  
+    const user = await getUserById(data.userId);
+    if (user) {
+      await sendWelcomeEmail({
+        email: user.email,
+        name: data.fullName,
+        pin: pin,
+        ticketNumber: ticketNumber,
+        eventDetails: {
+          name: "Huawei Career Summit",
+          date: "July 8th, 2025",
+          venue: "UON Graduation Square, Nairobi",
+        },
+      });
+
+      const jobSeekerProfile = await db
+        .select()
+        .from(jobSeekers)
+        .where(eq(jobSeekers.userId, data.userId))
+        .limit(1);
+
+      if (jobSeekerProfile.length > 0 && user.phoneNumber) {
+        try {
+          console.log(`📱 Sending welcome SMS to job seeker: ${jobSeekerProfile[0].id}`);
+          const { sendWelcomeSMS } = await import("@/lib/actions/send-sms-actions");
+          const smsResult = await sendWelcomeSMS(jobSeekerProfile[0].id);
+
+          if (smsResult.success) {
+            console.log(`✅ Welcome SMS sent successfully: ${smsResult.messageId}`);
+          } else {
+            console.error("❌ Failed to send welcome SMS:", smsResult.error);
+          }
+        } catch (error: any) {
+          console.error("❌ Error sending welcome SMS:", error);
+        }
+      } else {
+        console.warn("⚠️ Cannot send SMS: Job seeker profile not found or phone number missing");
+      }
+    }
 
     return {
       success: true,
       message: "Profile created successfully",
-      data: { pin, ticketNumber }
+      data: {
+        pin,
+        ticketNumber,
+      },
     };
-
   } catch (error) {
     console.error("Error creating job seeker profile:", error);
     if (error instanceof Error && error.message.includes("Profile already exists")) {
@@ -166,14 +203,26 @@ export async function getUserProfile(userId: string) {
 
     const { user, jobSeeker } = result[0];
     
+    // More robust profile completion check
+    const profileComplete = !!(jobSeeker?.id && jobSeeker?.cvUrl);
+    
     return {
       ...user,
       jobSeeker,
-      profileComplete: !!jobSeeker?.id,
+      profileComplete,
     };
 
   } catch (error) {
     console.error("Error fetching user profile:", error);
+    
+    // Log additional context for debugging
+    console.error("getUserProfile error context:", {
+      userId,
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    
+    // Return null to let calling code handle the error appropriately
     return null;
   }
 }

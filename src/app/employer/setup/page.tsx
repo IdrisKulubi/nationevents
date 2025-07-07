@@ -2,75 +2,56 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { EmployerSetupForm } from "@/components/employer/employer-setup-form";
 import db from "@/db/drizzle";
-import { users } from "@/db/schema";
+import { users, employers } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export default async function EmployerSetupPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function EmployerSetupPage() {
   const session = await auth();
   
   if (!session?.user?.id) {
     redirect("/login");
   }
 
-  const params = await searchParams;
-  const fromCompanyOnboard = params.from === "company-onboard";
+  // The new auth flow via `/api/auth/onboard` ensures the session role is correct.
+  // We can now trust the session and redirect if the role is not 'employer'.
+  if (session.user.role !== 'employer') {
+    console.log(`[AUTH_FLOW] Non-employer with role '${session.user.role}' accessed /employer/setup. Redirecting to dashboard.`);
+    redirect("/dashboard");
+  }
 
-  // Get current user from database
-  const currentUser = await db
+  // Check if an employer profile already exists for this user.
+  const existingEmployerProfile = await db
     .select()
-    .from(users)
-    .where(eq(users.id, session.user.id))
+    .from(employers)
+    .where(eq(employers.userId, session.user.id))
     .limit(1);
 
-  if (!currentUser[0]) {
-    redirect("/login");
+  // If a profile already exists, their setup is complete. Send to the main employer dashboard.
+  if (existingEmployerProfile[0]) {
+    console.log("[AUTH_FLOW] Employer profile already exists. Redirecting to /employer.");
+    redirect("/employer");
   }
 
-  const user = currentUser[0];
+  // Fetch the user's details to pre-fill the form.
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id)
+  });
 
-  // If user is coming from company onboard flow and doesn't have employer role, set it
-  if (fromCompanyOnboard && user.role !== "employer") {
-    await db
-      .update(users)
-      .set({ 
-        role: "employer",
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, session.user.id));
-    
-    // Update the user object for the component
-    user.role = "employer";
+  if (!user) {
+    // This is an unlikely edge case, but we redirect to login if the user is not found.
+    redirect("/login?error=UserNotFoundInSetup");
   }
 
-  // If user already has employer role but no profile, allow setup
-  // If user has different role and not from company onboard, redirect to appropriate dashboard
-  if (user.role !== "employer" && !fromCompanyOnboard) {
-    // Redirect based on user's actual role
-    if (user.role === "admin") {
-      redirect("/admin");
-    } else if (user.role === "security") {
-      redirect("/security");
-    } else {
-      redirect("/dashboard");
-    }
-  }
-
+  // If all checks pass, render the setup form. The page is now much simpler.
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            {fromCompanyOnboard ? "Welcome! Complete Your Company Profile" : "Company Setup"}
+            Welcome! Complete Your Company Profile
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {fromCompanyOnboard 
-              ? "Set up your company profile to start participating in the career summit"
-              : "Complete your company information to access the employer dashboard"
-            }
+            Set up your company profile to start participating in the career summit.
           </p>
         </div>
         
@@ -79,7 +60,6 @@ export default async function EmployerSetupPage({
             userId={session.user.id} 
             userName={user.name} 
             userEmail={user.email}
-            isFromCompanyOnboard={fromCompanyOnboard}
           />
         </div>
       </div>

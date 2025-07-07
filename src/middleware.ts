@@ -1,123 +1,117 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { getUserProfile } from "@/lib/actions/user-actions";
 import type { NextRequest } from "next/server";
 
-// Define public routes that don't need authentication
-const publicRoutes = [
+const PUBLIC_ROUTES = [
   '/',
   '/login',
-  '/profile-setup',
-  '/company-onboard',
-  '/no-access',
-  '/api/auth',
-  '/api/sentry-example-api',
+  '/api/auth', // Auth.js routes
+  '/sentry-example-api',
   '/sentry-example-page',
 ];
 
+const PROFILE_SETUP_ROUTES = {
+  job_seeker: '/profile-setup',
+  employer: '/employer/setup',
+};
+
+const DASHBOARD_ROUTES = {
+  job_seeker: '/dashboard',
+  employer: '/employer',
+  admin: '/admin',
+  security: '/security',
+};
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Skip middleware completely for static assets
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/_next') ||
-    pathname.includes('.') ||
-    pathname.startsWith('/favicon')
-  ) {
+
+  // Skip middleware for static assets and internal Next.js paths
+  if (pathname.startsWith('/_next') || pathname.includes('.')) {
     return NextResponse.next();
   }
 
-  try {
-    // Check if this is a public route first
-    const isPublicRoute = publicRoutes.some(route => 
-      pathname === route || pathname.startsWith(`${route}/`)
-    );
+  // Allow all public routes
+  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
+    return NextResponse.next();
+  }
 
-    // Get session for auth-protected routes (only if not a public route)
-    const session = !isPublicRoute ? await auth() : null;
+  const session = await auth();
 
-    if (isPublicRoute) {
+  // If no session, redirect to login page
+  if (!session?.user?.id) {
+    const loginUrl = new URL('/login', request.url);
+    if (pathname !== '/') {
+      loginUrl.searchParams.set('callbackUrl', pathname);
+    }
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const { role, profileCompleted } = session.user;
+
+  // Special handling for employer role to prevent redirect loops during profile creation
+  if (role === 'employer') {
+    // If accessing /employer but profile is incomplete, redirect to setup
+    if (!profileCompleted && pathname.startsWith('/employer') && pathname !== '/employer/setup') {
+      console.log(`Middleware: Employer profile incomplete. Redirecting to /employer/setup.`);
+      return NextResponse.redirect(new URL('/employer/setup', request.url));
+    }
+    
+    // If profile is complete and trying to access setup, redirect to dashboard
+    if (profileCompleted && pathname === '/employer/setup') {
+      console.log(`Middleware: Employer profile complete. Redirecting to /employer.`);
+      return NextResponse.redirect(new URL('/employer', request.url));
+    }
+    
+    // Allow access to setup page regardless of profile completion status
+    if (pathname === '/employer/setup') {
       return NextResponse.next();
     }
+  }
 
-    // Redirect unauthenticated users to login
-    if (!session?.user) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    // Profile completion checks are handled by individual pages
-    // This avoids issues with cached session data not reflecting latest profile status
-
-    // Role-based access control
-    const userRole = session.user.role;
-    
-    // Admin routes
-    if (pathname.startsWith('/admin/') && userRole !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-
-    // Employer routes - Allow access to employer setup during company onboard flow
-    if (pathname.startsWith('/employer/')) {
-      // Allow access to employer setup if coming from company onboard or user is employer
-      if (pathname === '/employer/setup' || pathname.startsWith('/employer/setup?')) {
-        const { searchParams } = request.nextUrl;
-        const fromCompanyOnboard = searchParams.get('from') === 'company-onboard';
-        
-        // Allow access if user is employer OR if they're coming from company onboard
-        if (userRole !== 'employer' && !fromCompanyOnboard) {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
-      } else {
-        // For other employer routes, user must have employer role
-        if (userRole !== 'employer') {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
+  // For non-employer roles, use the original logic
+  if (role !== 'employer') {
+    // If profile is not complete, redirect to the appropriate setup page
+    if (!profileCompleted) {
+      const setupPath = PROFILE_SETUP_ROUTES[role as keyof typeof PROFILE_SETUP_ROUTES];
+      if (setupPath && pathname !== setupPath) {
+        console.log(`Middleware: Profile incomplete. Redirecting to ${setupPath} for role ${role}.`);
+        return NextResponse.redirect(new URL(setupPath, request.url));
       }
     }
 
-    // Security routes
-    if (pathname.startsWith('/security/') && userRole !== 'security') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+    // If profile IS complete, prevent access to setup pages
+    if (profileCompleted) {
+      const setupPath = PROFILE_SETUP_ROUTES[role as keyof typeof PROFILE_SETUP_ROUTES];
+      if (setupPath && pathname === setupPath) {
+        const dashboardPath = DASHBOARD_ROUTES[role as keyof typeof DASHBOARD_ROUTES] || '/';
+        return NextResponse.redirect(new URL(dashboardPath, request.url));
+      }
     }
-
-    // Add security headers
-    const response = NextResponse.next();
-    
-    // Security headers
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    
-    // Cache headers for static content
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
-      response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-    }
-
-    return response;
-
-  } catch (error) {
-    console.error('Middleware error:', error);
-    
-    // Fallback to allow request if middleware fails
-    const response = NextResponse.next();
-    response.headers.set('X-Middleware-Error', 'true');
-    return response;
   }
+
+  // Role-based access control for protected routes
+  if (pathname.startsWith('/admin') && role !== 'admin') {
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
+  }
+  if (pathname.startsWith('/employer') && role !== 'employer' && role !== 'admin') {
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
+  }
+  if (pathname.startsWith('/security') && role !== 'security' && role !== 'admin') {
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes, but we handle /api/auth explicitly)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder files
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

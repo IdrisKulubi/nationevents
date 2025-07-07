@@ -36,6 +36,7 @@ export default async function EmployerLayout({
     .limit(1);
 
   if (!user[0] || (user[0].role !== "employer" && user[0].role !== "admin")) {
+    console.log("User does not have employer or admin role, redirecting to dashboard");
     redirect("/dashboard");
   }
 
@@ -47,8 +48,13 @@ export default async function EmployerLayout({
     .limit(1);
 
   // If no employer profile and user is not admin, redirect to setup
+  // This layout is used for ALL /employer/* routes, so we need to allow setup page
   if (!employerProfile[0] && user[0].role !== "admin") {
-    redirect("/employer/setup");
+    // Allow access to setup page, but redirect other employer routes to setup
+    // This prevents redirect loops while ensuring proper flow
+    console.log("No employer profile found for non-admin user");
+    // Note: We don't redirect here because this layout covers /employer/setup too
+    // The setup page will handle the profile creation, other pages will redirect
   }
 
   // For admin users without employer profile, create a mock employer object
@@ -100,20 +106,7 @@ export default async function EmployerLayout({
                   <Home className="h-4 w-4" />
                   Dashboard
                 </Link>
-                <Link 
-                  href="/employer/booths" 
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  <MapPin className="h-4 w-4" />
-                  Booths
-                </Link>
-                <Link 
-                  href="/employer/interviews" 
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Interviews
-                </Link>
+              
                 <Link 
                   href="/employer/candidates" 
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
@@ -185,20 +178,6 @@ export default async function EmployerLayout({
               Dashboard
             </Link>
             <Link 
-              href="/employer/booths" 
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors whitespace-nowrap"
-            >
-              <MapPin className="h-4 w-4" />
-              Booths
-            </Link>
-            <Link 
-              href="/employer/interviews" 
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors whitespace-nowrap"
-            >
-              <Calendar className="h-4 w-4" />
-              Interviews
-            </Link>
-            <Link 
               href="/employer/candidates" 
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors whitespace-nowrap"
             >
@@ -212,13 +191,20 @@ export default async function EmployerLayout({
               <Star className="h-4 w-4" />
               Shortlists
             </Link>
+            <Link 
+              href="/employer/analytics" 
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors whitespace-nowrap"
+            >
+              <Activity className="h-4 w-4" />
+              Analytics
+            </Link>
             {user[0].role === "admin" && (
               <Link 
                 href="/admin" 
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-900 hover:bg-orange-100 rounded-md transition-colors whitespace-nowrap"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-900 hover:bg-orange-100 rounded-md transition-colors"
               >
                 <Settings className="h-4 w-4" />
-                Admin
+                Admin Panel
               </Link>
             )}
           </div>
@@ -226,7 +212,7 @@ export default async function EmployerLayout({
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

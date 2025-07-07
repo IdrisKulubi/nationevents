@@ -9,12 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createEmployerProfile } from "@/app/api/employer/setup/actions";
 import { Building2, Users, Globe, Mail, Phone, MapPin, CheckCircle, AlertTriangle } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 interface EmployerSetupFormProps {
   userId: string;
   userName: string;
   userEmail?: string;
-  isFromCompanyOnboard?: boolean;
 }
 
 const industries = [
@@ -32,7 +32,8 @@ const companySizes = [
   { value: "enterprise", label: "Enterprise (1000+ employees)" },
 ];
 
-export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOnboard }: EmployerSetupFormProps) {
+export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetupFormProps) {
+  const { update } = useSession();
   const [formData, setFormData] = useState({
     companyName: "",
     companyDescription: "",
@@ -51,7 +52,6 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (!formData.companyName || !formData.industry || !formData.companySize || !formData.contactEmail) {
       setResult({
         success: false,
@@ -78,8 +78,19 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
         setResult(response);
         
         if (response.success) {
-          // Redirect will happen automatically via server action
+          console.log("[AUTH_FLOW] Profile created. Updating session and redirecting to /employer.");
+          
+          // Force a complete session refresh by triggering JWT update
+          try {
+            await update({ trigger: "update" });
+            console.log("[AUTH_FLOW] Session updated successfully");
+          } catch (error) {
+            console.error("[AUTH_FLOW] Session update failed:", error);
+          }
+          
+          // Wait a moment for the session to update, then do a hard redirect
           setTimeout(() => {
+            console.log("[AUTH_FLOW] Redirecting to /employer");
             window.location.href = "/employer";
           }, 1500);
         }
@@ -100,14 +111,14 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Company Information Section */}
       <div className="space-y-6">
-        <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
-          <Building2 className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
+        <div className="flex items-center gap-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900">Company Information</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
-            <Label htmlFor="company-name" className="text-sm font-semibold text-gray-700">
+            <Label htmlFor="company-name" className="text-sm font-semibold text-gray-700 dark:text-gray-900">
               Company Name *
             </Label>
             <Input
@@ -116,23 +127,23 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="e.g., Acme Corporation"
               value={formData.companyName}
               onChange={(e) => handleInputChange("companyName", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="industry" className="text-sm font-semibold text-gray-700">
+            <Label htmlFor="industry" className="text-sm font-semibold text-gray-700 dark:text-gray-900">
               Industry *
             </Label>
             <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
-              <SelectTrigger className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400">
-                <SelectValue placeholder="Select your industry" />
+              <SelectTrigger className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 text-gray-900 dark:text-gray-100">
+                <SelectValue placeholder="Select your industry" className="text-gray-500 dark:text-gray-400" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                 {industries.map((industry) => (
-                  <SelectItem key={industry} value={industry.toLowerCase()} className="py-3">
+                  <SelectItem key={industry} value={industry.toLowerCase()} className="py-3 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
                     {industry}
                   </SelectItem>
                 ))}
@@ -141,16 +152,16 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
           </div>
 
           <div>
-            <Label htmlFor="company-size" className="text-sm font-semibold text-gray-700">
+            <Label htmlFor="company-size" className="text-sm font-semibold text-gray-700 dark:text-gray-900">
               Company Size *
             </Label>
             <Select value={formData.companySize} onValueChange={(value) => handleInputChange("companySize", value)}>
-              <SelectTrigger className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400">
-                <SelectValue placeholder="Select company size" />
+              <SelectTrigger className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 text-gray-900 dark:text-gray-100">
+                <SelectValue placeholder="Select company size" className="text-gray-500 dark:text-gray-400" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                 {companySizes.map((size) => (
-                  <SelectItem key={size.value} value={size.value} className="py-3">
+                  <SelectItem key={size.value} value={size.value} className="py-3 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
                     {size.label}
                   </SelectItem>
                 ))}
@@ -160,7 +171,7 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
         </div>
 
         <div>
-          <Label htmlFor="company-description" className="text-sm font-semibold text-gray-700">
+          <Label htmlFor="company-description" className="text-sm font-semibold text-gray-700 dark:text-gray-900">
             Company Description
           </Label>
           <Textarea
@@ -168,18 +179,18 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
             placeholder="Tell job seekers about your company, culture, and what makes you unique..."
             value={formData.companyDescription}
             onChange={(e) => handleInputChange("companyDescription", e.target.value)}
-            className="mt-2 min-h-[120px] bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white resize-none"
+            className="mt-2 min-h-[120px] bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 resize-none text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
             disabled={isSubmitting}
             rows={5}
           />
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 dark:text-gray-100 mt-1">
             {formData.companyDescription.length}/500 characters
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="website" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Label htmlFor="website" className="text-sm font-semibold text-gray-700 dark:text-gray-900 flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Website
             </Label>
@@ -189,13 +200,13 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="https://www.yourcompany.com"
               value={formData.website}
               onChange={(e) => handleInputChange("website", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
             />
           </div>
 
           <div>
-            <Label htmlFor="address" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Label htmlFor="address" className="text-sm font-semibold text-gray-700 dark:text-gray-900 flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               Address
             </Label>
@@ -205,7 +216,7 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="123 Business Street, City, State"
               value={formData.address}
               onChange={(e) => handleInputChange("address", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
             />
           </div>
@@ -214,14 +225,14 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
 
       {/* Contact Information Section */}
       <div className="space-y-6">
-        <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
-          <Users className="h-5 w-5 text-green-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+        <div className="flex items-center gap-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900">Contact Information</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <Label htmlFor="contact-person" className="text-sm font-semibold text-gray-700">
+            <Label htmlFor="contact-person" className="text-sm font-semibold text-gray-700 dark:text-gray-900">
               Contact Person
             </Label>
             <Input
@@ -230,13 +241,13 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="Your full name"
               value={formData.contactPerson}
               onChange={(e) => handleInputChange("contactPerson", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
             />
           </div>
 
           <div>
-            <Label htmlFor="contact-email" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Label htmlFor="contact-email" className="text-sm font-semibold text-gray-700 dark:text-gray-900 flex items-center gap-2">
               <Mail className="h-4 w-4" />
               Contact Email *
             </Label>
@@ -246,14 +257,14 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="contact@yourcompany.com"
               value={formData.contactEmail}
               onChange={(e) => handleInputChange("contactEmail", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="contact-phone" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <Label htmlFor="contact-phone" className="text-sm font-semibold text-gray-700 dark:text-gray-900 flex items-center gap-2">
               <Phone className="h-4 w-4" />
               Contact Phone
             </Label>
@@ -263,7 +274,7 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
               placeholder="+1 (555) 123-4567"
               value={formData.contactPhone}
               onChange={(e) => handleInputChange("contactPhone", e.target.value)}
-              className="mt-2 h-12 bg-gray-50 border-2 border-gray-300 focus:border-blue-400 focus:ring-blue-400 focus:bg-white"
+              className="mt-2 h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-500 focus:ring-blue-400 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
               disabled={isSubmitting}
             />
           </div>
@@ -275,7 +286,7 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
         <Button 
           type="submit" 
           disabled={isSubmitting || !formData.companyName || !formData.industry || !formData.companySize || !formData.contactEmail}
-          className="w-full h-14 text-base font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-sm"
+          className="w-full h-14 text-base font-semibold bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 shadow-sm text-white"
           size="lg"
         >
           {isSubmitting ? (
@@ -291,7 +302,7 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
           )}
         </Button>
 
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-gray-500 dark:text-gray-900 text-center">
           By completing setup, you agree to our terms of service and can start managing your booth and interviews.
         </p>
       </div>
@@ -301,19 +312,19 @@ export function EmployerSetupForm({ userId, userName, userEmail, isFromCompanyOn
         <Alert 
           className={`border-2 ${
             result.success 
-              ? "border-green-300 bg-green-50" 
-              : "border-red-300 bg-red-50"
+              ? "border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20" 
+              : "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
           } shadow-sm`}
         >
           <div className="flex items-start gap-3">
             {result.success ? (
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             ) : (
-              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
             )}
             <AlertDescription 
               className={`text-base font-medium ${
-                result.success ? "text-green-900" : "text-red-900"
+                result.success ? "text-green-900 dark:text-green-100" : "text-red-900 dark:text-red-100"
               }`}
             >
               {result.message}

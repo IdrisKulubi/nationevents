@@ -69,12 +69,16 @@ export async function verifyAttendeePin(pin: string, securityId: string) {
 
     const attendee = jobSeeker[0];
 
-    // Check if attendee is approved
+    // Auto-approve attendee if PIN is valid (security verification grants access)
     if (attendee.registrationStatus !== "approved") {
-      return {
-        success: false,
-        message: `Attendee registration is ${attendee.registrationStatus}. Cannot check in.`
-      };
+      // Update registration status to approved since PIN verification confirms validity
+      await db
+        .update(jobSeekers)
+        .set({ registrationStatus: "approved" })
+        .where(eq(jobSeekers.id, attendee.id));
+      
+      // Update the attendee object to reflect the new status
+      attendee.registrationStatus = "approved";
     }
 
     // Check if already checked in today
@@ -191,12 +195,16 @@ export async function verifyAttendeeTicket(ticketNumber: string, securityId: str
 
     const attendee = jobSeeker[0];
 
-    // Check if attendee is approved
+    // Auto-approve attendee if ticket is valid (security verification grants access)
     if (attendee.registrationStatus !== "approved") {
-      return {
-        success: false,
-        message: `Attendee registration is ${attendee.registrationStatus}. Cannot check in.`
-      };
+      // Update registration status to approved since ticket verification confirms validity
+      await db
+        .update(jobSeekers)
+        .set({ registrationStatus: "approved" })
+        .where(eq(jobSeekers.id, attendee.id));
+      
+      // Update the attendee object to reflect the new status
+      attendee.registrationStatus = "approved";
     }
 
     // Check if already checked in

@@ -113,11 +113,11 @@ export function HeroSection() {
             {/* Quick Stats */}
             <div className={`grid grid-cols-3 gap-8 pt-8 border-t border-white/10 transition-all duration-1000 delay-1000 ${isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-0'}`}>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">50+</p>
+                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">100+</p>
                 <p className="text-sm text-gray-300">Companies</p>
               </div>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">100+</p>
+                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">2000+</p>
                 <p className="text-sm text-gray-300">Opportunities</p>
               </div>
               <div className="text-center bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/10 hover:scale-105 transition-all duration-300">

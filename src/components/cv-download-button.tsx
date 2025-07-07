@@ -8,8 +8,7 @@ interface CVDownloadButtonProps {
   candidateName: string;
 }
 
-//eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function CVDownloadButton({ cvUrl, candidateName }: CVDownloadButtonProps) {
+export function CVDownloadButton({ cvUrl }: CVDownloadButtonProps) {
   const convertToPublicUrl = (storageUrl: string): string => {
     // Convert R2 storage URL to public viewing URL
     if (storageUrl.includes('r2.cloudflarestorage.com')) {
