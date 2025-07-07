@@ -75,8 +75,28 @@ export default async function EmployerCandidatesPage() {
     const isShortlisted = shortlistedIds.has(candidate.jobSeeker.id);
     const interactionCount = interactionMap.get(candidate.jobSeeker.id) || 0;
     
+    let skills: string[] = [];
+    if (candidate.jobSeeker.skills) {
+      if (typeof candidate.jobSeeker.skills === 'string') {
+        try {
+          const parsed = JSON.parse(candidate.jobSeeker.skills);
+          if (Array.isArray(parsed)) {
+            skills = parsed;
+          }
+        } catch (e) {
+          // The string is not valid JSON. Log it and default to an empty array.
+          console.warn(`Could not parse skills for jobSeeker ${candidate.jobSeeker.id}. Value was:`, candidate.jobSeeker.skills);
+        }
+      } else if (Array.isArray(candidate.jobSeeker.skills)) {
+        skills = candidate.jobSeeker.skills as string[];
+      }
+    }
+
     return {
-      jobSeeker: candidate.jobSeeker,
+      jobSeeker: {
+        ...candidate.jobSeeker,
+        skills,
+      },
       user: candidate.user!,
       isShortlisted,
       interactionCount
