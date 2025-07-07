@@ -27,32 +27,10 @@ import {
   Star
 } from "lucide-react";
 import { addToShortlist, logCandidateInteraction } from "@/app/api/employer/shortlists/actions";
-
-interface CandidateData {
-  jobSeeker: {
-    id: string;
-    bio?: string;
-    experience?: string;
-    skills?: string[];
-    education?: string;
-    location?: string;
-    portfolioUrl?: string;
-    linkedinUrl?: string;
-    cvUrl?: string;
-    createdAt: Date;
-  };
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    phoneNumber?: string;
-  };
-  isShortlisted?: boolean;
-  interactionCount?: number;
-}
+import { type Candidate } from './client-page'; // Import the corrected type
 
 interface CandidateProfileModalProps {
-  candidate: CandidateData;
+  candidate: Candidate;
   trigger?: React.ReactNode;
   onShortlistUpdate?: () => void;
 }
