@@ -84,41 +84,32 @@ export const {
         }
       }
 
-      // This logic runs on sign-in AND on session updates.
-      // We need to ensure we have the most up-to-date user info in the token.
-      const shouldRefresh = user || trigger === "update";
-
-      if (shouldRefresh) {
-        console.log("JWT: Refreshing token data from DB.", { userId: token.sub, trigger });
-        try {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, token.sub!),
-          });
-
-          if (dbUser) {
-            token.role = dbUser.role;
-
-            // Check profile completion based on role
-            if (dbUser.role === 'employer') {
-              const employerProfile = await db.query.employers.findFirst({
-                where: eq(employers.userId, dbUser.id),
-              });
-              // An employer profile is complete if it exists and has a company name.
-              token.profileCompleted = !!(employerProfile?.id && employerProfile?.companyName);
-            } else { // 'job_seeker' or other default roles
-              const jobSeekerProfile = await db.query.jobSeekers.findFirst({
-                where: eq(jobSeekers.userId, dbUser.id),
-              });
-              // A job seeker profile is complete if it exists and has a CV.
-              token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
-            }
-             console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
-          } else {
-            console.warn("JWT: User not found during refresh.", { userId: token.sub });
+      // This logic now runs on EVERY session access to ensure data is fresh.
+      // This is crucial to prevent the middleware from using a stale `profileCompleted` status.
+      try {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.sub!),
+          with: {
+            jobSeekerProfile: true,
+            employerProfile: true,
           }
-        } catch (error) {
-          console.error("JWT: Error refreshing token data.", error);
+        });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+
+          // Check profile completion based on role
+          if (dbUser.role === 'employer') {
+            token.profileCompleted = !!(dbUser.employerProfile && (dbUser.employerProfile as any).companyName);
+          } else { // 'job_seeker' or other default roles
+            token.profileCompleted = !!(dbUser.jobSeekerProfile && (dbUser.jobSeekerProfile as any).cvUrl);
+          }
+           console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
+        } else {
+          console.warn("JWT: User not found during token processing.", { userId: token.sub });
         }
+      } catch (error) {
+        console.error("JWT: Error refreshing token data.", error);
       }
       
       return token;

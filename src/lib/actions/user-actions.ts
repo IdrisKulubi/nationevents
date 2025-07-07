@@ -3,7 +3,6 @@ import db from "@/db/drizzle";
 import { users, jobSeekers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateSecurePin, generateTicketNumber } from "@/lib/utils/security";
-import { sendWelcomeEmail } from "@/lib/utils/notifications";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
 
@@ -129,15 +128,16 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
 
     });
 
-   
+    // Notifications removed (no email or SMS sent)
 
     return {
       success: true,
       message: "Profile created successfully",
+      shouldUpdateSession: true, // Signal to client to refresh session
       data: {
         pin,
         ticketNumber,
-      },
+      }
     };
   } catch (error) {
     console.error("Error creating job seeker profile:", error);
@@ -263,6 +263,7 @@ export async function updateUserProfile(userId: string, updates: Partial<CreateJ
     return {
       success: true,
       message: "Profile updated successfully",
+      shouldUpdateSession: true, // Signal to client to refresh session
     };
 
   } catch (error) {
@@ -291,45 +292,11 @@ export async function regeneratePin(userId: string) {
       })
       .where(eq(jobSeekers.userId, userId));
 
-    // Get user details for notifications
-    const userProfile = await getUserProfile(userId);
-    if (userProfile) {
-      // Send new PIN via email
-      await sendWelcomeEmail({
-        email: userProfile.email,
-        name: userProfile.name || "Job Seeker",
-        pin: newPin,
-        ticketNumber: userProfile.jobSeeker?.ticketNumber || "",
-        eventDetails: {
-          name: "Huawei Career Summit",
-          date: "July 8th, 2025",
-          venue: "UON Graduation Square, Nairobi",
-        }
-      });
-
-      // Send new PIN via SMS using Twilio
-      if (userProfile.phoneNumber && userProfile.jobSeeker?.id) {
-        try {
-          console.log(`📱 Sending PIN reminder SMS to job seeker: ${userProfile.jobSeeker.id}`);
-          
-          // Use PIN reminder SMS function instead
-          const { sendPinReminderSMS } = await import("@/lib/actions/send-sms-actions");
-          const smsResult = await sendPinReminderSMS(userProfile.jobSeeker.id);
-          
-          if (smsResult.success) {
-            console.log(`✅ PIN reminder SMS sent successfully: ${smsResult.messageId}`);
-          } else {
-            console.error("❌ Failed to send PIN reminder SMS:", smsResult.error);
-          }
-        } catch (error: any) {
-          console.error("❌ Error sending PIN reminder SMS:", error);
-        }
-      }
-    }
+    // Notifications removed (no email or SMS sent)
 
     return {
       success: true,
-      message: "New PIN generated and sent successfully",
+      message: "New PIN generated successfully",
       pin: newPin,
     };
 
