@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -27,32 +26,10 @@ import {
   Star
 } from "lucide-react";
 import { addToShortlist, logCandidateInteraction } from "@/app/api/employer/shortlists/actions";
-
-interface CandidateData {
-  jobSeeker: {
-    id: string;
-    bio?: string;
-    experience?: string;
-    skills?: string[];
-    education?: string;
-    location?: string;
-    portfolioUrl?: string;
-    linkedinUrl?: string;
-    cvUrl?: string;
-    createdAt: Date;
-  };
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    phoneNumber?: string;
-  };
-  isShortlisted?: boolean;
-  interactionCount?: number;
-}
+import { Candidate } from "@/app/employer/candidates/client-page";
 
 interface CandidateProfileModalProps {
-  candidate: CandidateData;
+  candidate: Candidate;
   trigger?: React.ReactNode;
   onShortlistUpdate?: () => void;
 }
@@ -186,12 +163,7 @@ export function CandidateProfileModal({
                   <span>{candidate.user.phoneNumber}</span>
                 </div>
               )}
-              {candidate.jobSeeker.location && (
-                <div className="flex items-center gap-2 text-gray-700">
-                  <MapPin className="h-4 w-4" />
-                  <span>{candidate.jobSeeker.location}</span>
-                </div>
-              )}
+             
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Calendar className="h-4 w-4" />
                 <span>Member since {candidate.jobSeeker.createdAt.toLocaleDateString()}</span>
