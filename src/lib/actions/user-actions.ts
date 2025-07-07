@@ -129,44 +129,7 @@ export async function createJobSeekerProfile(data: CreateJobSeekerProfileData) {
 
     });
 
-    const user = await getUserById(data.userId);
-    if (user) {
-      await sendWelcomeEmail({
-        email: user.email,
-        name: data.fullName,
-        pin: pin,
-        ticketNumber: ticketNumber,
-        eventDetails: {
-          name: "Huawei Career Summit",
-          date: "July 8th, 2025",
-          venue: "UON Graduation Square, Nairobi",
-        },
-      });
-
-      const jobSeekerProfile = await db
-        .select()
-        .from(jobSeekers)
-        .where(eq(jobSeekers.userId, data.userId))
-        .limit(1);
-
-      if (jobSeekerProfile.length > 0 && user.phoneNumber) {
-        try {
-          console.log(`📱 Sending welcome SMS to job seeker: ${jobSeekerProfile[0].id}`);
-          const { sendWelcomeSMS } = await import("@/lib/actions/send-sms-actions");
-          const smsResult = await sendWelcomeSMS(jobSeekerProfile[0].id);
-
-          if (smsResult.success) {
-            console.log(`✅ Welcome SMS sent successfully: ${smsResult.messageId}`);
-          } else {
-            console.error("❌ Failed to send welcome SMS:", smsResult.error);
-          }
-        } catch (error: any) {
-          console.error("❌ Error sending welcome SMS:", error);
-        }
-      } else {
-        console.warn("⚠️ Cannot send SMS: Job seeker profile not found or phone number missing");
-      }
-    }
+   
 
     return {
       success: true,
