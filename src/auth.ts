@@ -12,7 +12,7 @@ declare module "next-auth" {
       id: string;
       role: "job_seeker" | "employer" | "admin" | "security";
       profileCompleted: boolean;
-    } & Omit<DefaultSession["user"], "id" | "image" | "email">;
+    } & DefaultSession["user"];
   }
   interface User {
     role: "job_seeker" | "employer" | "admin" | "security";
@@ -62,6 +62,9 @@ export const {
         token.sub = user.id;
         token.role = user.role;
         token.profileCompleted = user.profileCompleted;
+        token.name = user.name;
+        token.email = user.email;
+        token.image = user.image;
         
         const cookieStore = cookies();
         const intentCookie = (await cookieStore).get("auth_intent");
@@ -84,6 +87,9 @@ export const {
         });
 
         if (dbUser) {
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+          token.image = dbUser.image;
           token.role = dbUser.role;
           if (dbUser.role === 'employer') {
             token.profileCompleted = !!dbUser.employer;
@@ -102,6 +108,9 @@ export const {
         session.user.id = token.sub;
         session.user.role = token.role as "job_seeker" | "employer" | "admin" | "security";
         session.user.profileCompleted = token.profileCompleted as boolean;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.image = token.image as string | null;
       }
       return session;
     },
