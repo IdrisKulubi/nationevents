@@ -23,7 +23,12 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
 import db from "@/db/drizzle";
-import { getDashboardStats as getCachedDashboardStats, getAllUsers as getCachedAllUsers, getAllEmployers as getCachedAllEmployers } from "@/lib/cached-db";
+import { 
+  getDashboardStats as getCachedDashboardStats, 
+  getAllUsers as getCachedAllUsers, 
+  getAllEmployers as getCachedAllEmployers,
+  getRecentActivity as getCachedRecentActivity
+} from "@/lib/cached-db";
 
 // Types for better type safety
 interface LogEntry {
@@ -119,27 +124,7 @@ export async function getRecentActivity() {
   await ensureAdminAccess();
 
   try {
-    const recentLogs = await db
-      .select({
-        id: systemLogs.id,
-        action: systemLogs.action,
-        resource: systemLogs.resource,
-        details: systemLogs.details,
-        createdAt: systemLogs.createdAt,
-        userName: users.name
-      })
-      .from(systemLogs)
-      .leftJoin(users, eq(systemLogs.userId, users.id))
-      .orderBy(desc(systemLogs.createdAt))
-      .limit(10);
-
-    return recentLogs.map((log: typeof recentLogs[0]) => ({
-      action: log.action,
-      details: log.details,
-      time: log.createdAt,
-      user: log.userName || "System",
-      type: log.resource === "security" ? "warning" : "info"
-    }));
+    return await getCachedRecentActivity();
   } catch (error) {
     console.error("Error fetching recent activity:", error);
     throw new Error("Failed to fetch recent activity");

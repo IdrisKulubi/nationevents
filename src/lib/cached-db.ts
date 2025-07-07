@@ -8,7 +8,8 @@ import {
   interviewSlots,
   attendanceRecords,
   securityIncidents,
-  securityPersonnel
+  securityPersonnel,
+  systemLogs
 } from "@/db/schema";
 import { eq, desc, count, and, gte, lte, sql, asc } from "drizzle-orm";
 import { cacheManager, CACHE_KEYS, CACHE_TTL } from "./redis";
@@ -382,6 +383,42 @@ export async function getAttendanceAnalytics(period: 'day' | 'week' | 'month' = 
       };
     },
     CACHE_TTL.ANALYTICS,
+    forceRefresh
+  );
+}
+
+/**
+ * Get recent system activity with caching.
+ * This is for the main admin dashboard and should be cached.
+ */
+export async function getRecentActivity(forceRefresh: boolean = false) {
+  return cacheManager.getOrSet(
+    CACHE_KEYS.RECENT_ACTIVITY,
+    'all',
+    async () => {
+      const recentLogs = await db
+        .select({
+          id: systemLogs.id,
+          action: systemLogs.action,
+          resource: systemLogs.resource,
+          details: systemLogs.details,
+          createdAt: systemLogs.createdAt,
+          userName: users.name
+        })
+        .from(systemLogs)
+        .leftJoin(users, eq(systemLogs.userId, users.id))
+        .orderBy(desc(systemLogs.createdAt))
+        .limit(10);
+
+      return recentLogs.map((log: typeof recentLogs[0]) => ({
+        action: log.action,
+        details: log.details,
+        time: log.createdAt,
+        user: log.userName || "System",
+        type: log.resource === "security" ? "warning" : "info"
+      }));
+    },
+    CACHE_TTL.IMMEDIATE, // Cache for 60 seconds
     forceRefresh
   );
 }

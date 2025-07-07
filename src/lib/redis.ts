@@ -9,6 +9,7 @@ export const CACHE_KEYS = {
   BOOTHS: 'booth',
   ATTENDANCE: 'attendance',
   DASHBOARD_STATS: 'dashboard_stats',
+  RECENT_ACTIVITY: 'recent_activity',
   SECURITY: 'security',
   INTERVIEWS: 'interview',
   ANALYTICS: 'analytics',
