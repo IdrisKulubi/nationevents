@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -27,7 +26,7 @@ import {
   Star
 } from "lucide-react";
 import { addToShortlist, logCandidateInteraction } from "@/app/api/employer/shortlists/actions";
-import { type Candidate } from './client-page'; // Import the corrected type
+import { Candidate } from "@/app/employer/candidates/client-page";
 
 interface CandidateProfileModalProps {
   candidate: Candidate;
@@ -164,12 +163,7 @@ export function CandidateProfileModal({
                   <span>{candidate.user.phoneNumber}</span>
                 </div>
               )}
-              {candidate.jobSeeker.location && (
-                <div className="flex items-center gap-2 text-gray-700">
-                  <MapPin className="h-4 w-4" />
-                  <span>{candidate.jobSeeker.location}</span>
-                </div>
-              )}
+             
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Calendar className="h-4 w-4" />
                 <span>Member since {candidate.jobSeeker.createdAt.toLocaleDateString()}</span>
