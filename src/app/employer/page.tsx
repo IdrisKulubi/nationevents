@@ -22,53 +22,40 @@ export default async function EmployerDashboard() {
   try {
     const session = await auth();
     
-    if (!session?.user?.id) {
-      redirect("/login");
-    }
-    
-    // Get user info to check role
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.user.id))
-      .limit(1);
+    // The middleware now guarantees that a session and a user exist.
+    // It also guarantees that the user has the 'employer' or 'admin' role.
+    const userId = session!.user!.id;
+    const userRole = session!.user!.role;
 
-    if (!user[0]) {
-      redirect("/login");
+    // If an employer has not completed their profile, redirect to the setup page.
+    // Admins are allowed to proceed without an employer profile.
+    if (userRole === 'employer' && !session?.user?.profileCompleted) {
+      redirect('/employer/setup');
     }
 
-    const currentUser = user[0];
-    
-    // Get employer profile
+    // Fetch the employer profile. The middleware ensures this will exist for employers.
     const employerProfile = await db
       .select()
       .from(employers)
-      .where(eq(employers.userId, session.user.id))
+      .where(eq(employers.userId, userId))
       .limit(1);
 
-    // If no employer profile and user is not admin, redirect to setup
-    if (!employerProfile[0] && currentUser.role !== "admin") {
-      console.log("No employer profile found for non-admin user, redirecting to setup");
-      redirect("/employer/setup");
-    }
+    // Fetch user details for mock data if needed
+    const userRecord = await db
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-    // For admin users without employer profile, create a mock employer
+    // If an admin is viewing the page without an employer profile, we can create a mock.
+    // For actual employers, employerProfile[0] is guaranteed to exist by the check above.
     const employer = employerProfile[0] || {
       id: "admin_mock_employer",
-      userId: session.user.id,
+      userId: userId,
       companyName: "Admin Portal Access",
-      companyDescription: "Administrative access to employer features",
-      industry: "administration",
-      companySize: "enterprise" as const,
-      website: null,
-      logoUrl: null,
-      address: null,
-      contactPerson: currentUser.name,
-      contactEmail: currentUser.email,
-      contactPhone: null,
-      isVerified: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      contactPerson: userRecord[0]?.name ?? "Admin",
+      contactEmail: userRecord[0]?.email ?? "admin@system.com",
+      // ... (add other necessary mock properties)
     };
 
     // Get current active event (most recent active event)
@@ -80,7 +67,7 @@ export default async function EmployerDashboard() {
       .limit(1);
 
     // Get recent candidate interactions
-    const recentInteractions = employerProfile[0] ? await db
+    const recentInteractions = employerProfile.length > 0 ? await db
       .select({
         interaction: candidateInteractions,
         jobSeeker: jobSeekers,
@@ -94,13 +81,13 @@ export default async function EmployerDashboard() {
       .limit(5) : [];
 
     // Get shortlists count
-    const shortlistsCount = employerProfile[0] ? await db
+    const shortlistsCount = employerProfile.length > 0 ? await db
       .select({ count: count() })
       .from(shortlists)
       .where(eq(shortlists.employerId, employer.id)) : [{ count: 0 }];
 
     // Get total interactions (views)
-    const totalInteractions = employerProfile[0] ? await db
+    const totalInteractions = employerProfile.length > 0 ? await db
       .select({ count: count() })
       .from(candidateInteractions)
       .where(eq(candidateInteractions.employerId, employer.id)) : [{ count: 0 }];
@@ -109,7 +96,7 @@ export default async function EmployerDashboard() {
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Admin Notice (only shown for admin users) */}
-          {currentUser.role === "admin" && !employerProfile[0] && (
+          {userRole === "admin" && !employerProfile[0] && (
             <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
               <p className="font-bold">Admin Access Mode</p>
               <p>You&apos;re viewing the employer portal as an administrator.</p>

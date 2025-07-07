@@ -9,6 +9,7 @@ import {
   json,
   decimal,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { type AdapterAccount } from "next-auth/adapters";
 
 // Enhanced Users table with all roles
@@ -37,6 +38,18 @@ export const users = pgTable(
     lastActiveIdx: index("user_last_active_idx").on(table.lastActive),
   })
 );
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+	accounts: many(accounts),
+	jobSeeker: one(jobSeekers, {
+		fields: [users.id],
+		references: [jobSeekers.userId],
+	}),
+  employer: one(employers, {
+    fields: [users.id],
+    references: [employers.userId],
+  }),
+}));
 
 // Job Seekers Profile
 export const jobSeekers = pgTable(
@@ -114,6 +127,13 @@ export const jobSeekers = pgTable(
   })
 );
 
+export const jobSeekersRelations = relations(jobSeekers, ({ one }) => ({
+  user: one(users, {
+    fields: [jobSeekers.userId],
+    references: [users.id],
+  }),
+}));
+
 // Employers/Companies
 export const employers = pgTable(
   "employer",
@@ -140,6 +160,15 @@ export const employers = pgTable(
     verifiedIdx: index("employer_verified_idx").on(table.isVerified),
   })
 );
+
+export const employersRelations = relations(employers, ({ one, many }) => ({
+  user: one(users, {
+    fields: [employers.userId],
+    references: [users.id],
+  }),
+  jobs: many(jobs),
+  booths: many(booths),
+}));
 
 // Events
 export const events = pgTable(
@@ -188,6 +217,12 @@ export const events = pgTable(
   })
 );
 
+export const eventsRelations = relations(events, ({ many }) => ({
+  jobs: many(jobs),
+  booths: many(booths),
+  checkpoints: many(checkpoints),
+}));
+
 // Job Positions
 export const jobs = pgTable(
   "job",
@@ -217,6 +252,18 @@ export const jobs = pgTable(
   })
 );
 
+export const jobsRelations = relations(jobs, ({ one, many }) => ({
+  employer: one(employers, {
+    fields: [jobs.employerId],
+    references: [employers.id],
+  }),
+  event: one(events, {
+    fields: [jobs.eventId],
+    references: [events.id],
+  }),
+  interviewSlots: many(interviewSlots),
+}));
+
 // Booths
 export const booths = pgTable(
   "booth",
@@ -239,6 +286,19 @@ export const booths = pgTable(
     boothNumberIdx: index("booth_number_idx").on(table.boothNumber),
   })
 );
+
+export const boothsRelations = relations(booths, ({ one, many }) => ({
+  event: one(events, {
+    fields: [booths.eventId],
+    references: [events.id],
+  }),
+  employer: one(employers, {
+    fields: [booths.employerId],
+    references: [employers.id],
+  }),
+  interviewSlots: many(interviewSlots),
+  assignments: many(boothAssignments),
+}));
 
 // Interview Slots
 export const interviewSlots = pgTable(

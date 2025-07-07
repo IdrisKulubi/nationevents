@@ -22,6 +22,13 @@
       "when": 1751808265790,
       "tag": "0002_square_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1751915698428,
+      "tag": "0003_chunky_plazm",
+      "breakpoints": true
     }
   ]
 }

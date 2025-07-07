@@ -10,11 +10,6 @@ const PUBLIC_ROUTES = [
   '/sentry-example-page',
 ];
 
-const PROFILE_SETUP_ROUTES = {
-  job_seeker: '/profile-setup',
-  employer: '/employer/setup',
-};
-
 const DASHBOARD_ROUTES = {
   job_seeker: '/dashboard',
   employer: '/employer',
@@ -46,60 +41,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const { role, profileCompleted } = session.user;
+  const { user } = session;
 
-  // Special handling for employer role to prevent redirect loops during profile creation
-  if (role === 'employer') {
-    // If accessing /employer but profile is incomplete, redirect to setup
-    if (!profileCompleted && pathname.startsWith('/employer') && pathname !== '/employer/setup') {
-      console.log(`Middleware: Employer profile incomplete. Redirecting to /employer/setup.`);
-      return NextResponse.redirect(new URL('/employer/setup', request.url));
-    }
-    
-    // If profile is complete and trying to access setup, redirect to dashboard
-    if (profileCompleted && pathname === '/employer/setup') {
-      console.log(`Middleware: Employer profile complete. Redirecting to /employer.`);
-      return NextResponse.redirect(new URL('/employer', request.url));
-    }
-    
-    // Allow access to setup page regardless of profile completion status
-    if (pathname === '/employer/setup') {
-      return NextResponse.next();
-    }
-  }
-
-  // For non-employer roles, use the original logic
-  if (role !== 'employer') {
-    // If profile is not complete, redirect to the appropriate setup page
-    if (!profileCompleted) {
-      const setupPath = PROFILE_SETUP_ROUTES[role as keyof typeof PROFILE_SETUP_ROUTES];
-      if (setupPath && pathname !== setupPath) {
-        console.log(`Middleware: Profile incomplete. Redirecting to ${setupPath} for role ${role}.`);
-        return NextResponse.redirect(new URL(setupPath, request.url));
-      }
-    }
-
-    // If profile IS complete, prevent access to setup pages
-    if (profileCompleted) {
-      const setupPath = PROFILE_SETUP_ROUTES[role as keyof typeof PROFILE_SETUP_ROUTES];
-      if (setupPath && pathname === setupPath) {
-        const dashboardPath = DASHBOARD_ROUTES[role as keyof typeof DASHBOARD_ROUTES] || '/';
-        return NextResponse.redirect(new URL(dashboardPath, request.url));
-      }
-    }
-  }
-
-  // Role-based access control for protected routes
-  if (pathname.startsWith('/admin') && role !== 'admin') {
+  // Role-based access control
+  if (pathname.startsWith('/admin') && user.role !== 'admin') {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
   }
-  if (pathname.startsWith('/employer') && role !== 'employer' && role !== 'admin') {
+  if (pathname.startsWith('/security') && user.role !== 'security' && user.role !== 'admin') {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
   }
-  if (pathname.startsWith('/security') && role !== 'security' && role !== 'admin') {
+  if (pathname.startsWith('/employer') && user.role !== 'employer' && user.role !== 'admin') {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
   }
-
+  
   return NextResponse.next();
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ const companySizes = [
 ];
 
 export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetupFormProps) {
+  const router = useRouter();
   const { update } = useSession();
   const [formData, setFormData] = useState({
     companyName: "",
@@ -78,21 +80,8 @@ export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetup
         setResult(response);
         
         if (response.success) {
-          console.log("[AUTH_FLOW] Profile created. Updating session and redirecting to /employer.");
-          
-          // Force a complete session refresh by triggering JWT update
-          try {
-            await update({ trigger: "update" });
-            console.log("[AUTH_FLOW] Session updated successfully");
-          } catch (error) {
-            console.error("[AUTH_FLOW] Session update failed:", error);
-          }
-          
-          // Wait a moment for the session to update, then do a hard redirect
-          setTimeout(() => {
-            console.log("[AUTH_FLOW] Redirecting to /employer");
-            window.location.href = "/employer";
-          }, 1500);
+          update();
+          router.push("/employer");
         }
       } catch (error) {
         setResult({

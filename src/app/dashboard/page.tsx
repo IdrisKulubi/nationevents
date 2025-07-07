@@ -17,6 +17,18 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const { user } = session;
+
+  // Handle redirects based on role
+  if (user.role === "employer") redirect("/employer");
+  if (user.role === "admin") redirect("/admin");
+  if (user.role === "security") redirect("/security");
+
+  // For job seekers, ensure their profile is complete before showing the dashboard.
+  if (user.role === "job_seeker" && !user.profileCompleted) {
+    redirect("/profile-setup");
+  }
+
   let userProfile;
   try {
     userProfile = await getUserProfile(session.user.id!);
@@ -26,49 +38,10 @@ export default async function DashboardPage() {
     redirect("/profile-setup");
   }
   
-  // Handle different user roles
-  if (userProfile?.role === "employer") {
-    // Check if employer has completed their profile
-    const employerProfile = await db
-      .select()
-      .from(employers)
-      .where(eq(employers.userId, session.user.id))
-      .limit(1);
-    
-    if (!employerProfile[0]) {
-      // Employer doesn't have a profile, redirect to setup
-      redirect("/employer/setup");
-    } else {
-      // Employer has profile, redirect to employer dashboard
-      redirect("/employer");
-    }
-  }
-  
-  if (userProfile?.role === "admin") {
-    redirect("/admin");
-  }
-  
-  if (userProfile?.role === "security") {
-    redirect("/security");
-  }
-  
-  // More robust profile completion check for job seekers
-  // Check both profileComplete flag AND actual CV URL existence
-  const hasCompleteProfile = userProfile?.profileComplete && userProfile?.jobSeeker?.cvUrl;
-  
-  if (!hasCompleteProfile) {
-    console.log("Dashboard: User profile incomplete, redirecting to profile setup", {
-      profileComplete: userProfile?.profileComplete,
-      hasCvUrl: !!userProfile?.jobSeeker?.cvUrl,
-      hasJobSeekerRecord: !!userProfile?.jobSeeker?.id,
-      userId: session.user.id
-    });
-    
-    // Add a small delay to allow any ongoing session updates to complete
-    // This helps prevent redirect loops during profile creation
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    redirect("/profile-setup");
+  // This page is only for job seekers, so if we reach here with a different role
+  // (which shouldn't happen due to the checks above), we redirect.
+  if (userProfile?.role !== "job_seeker") {
+    redirect("/login"); // Fallback redirect
   }
 
   return (
