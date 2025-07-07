@@ -29,9 +29,9 @@ export default async function EmployerDashboard() {
 
     // If an employer has not completed their profile, redirect to the setup page.
     // Admins are allowed to proceed without an employer profile.
-    if (userRole === 'employer' && !session?.user?.profileCompleted) {
-      redirect('/employer/setup');
-    }
+    // if (userRole === 'employer' && !session?.user?.profileCompleted) {
+    //   redirect('/employer/setup');
+    // }
 
     // Fetch the employer profile. The middleware ensures this will exist for employers.
     const employerProfile = await db

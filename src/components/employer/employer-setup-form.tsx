@@ -80,7 +80,7 @@ export function EmployerSetupForm({ userId, userName, userEmail }: EmployerSetup
         setResult(response);
         
         if (response.success) {
-          update();
+          await update({ profileCompleted: true });
           router.push("/employer");
         }
       } catch (error) {

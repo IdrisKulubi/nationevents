@@ -56,7 +56,12 @@ export const {
       // Default to the dashboard, and let the middleware handle role-based redirects.
       return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, user, trigger, account }) {
+    async jwt({ token, user, trigger, account, session }) {
+      // If the session was updated with new data (e.g., from a form), merge it into the token
+      if (trigger === "update" && session?.profileCompleted) {
+        token.profileCompleted = session.profileCompleted;
+      }
+
       // On initial sign-in, add user data to the token
       if (user && account) {
         token.sub = user.id;
