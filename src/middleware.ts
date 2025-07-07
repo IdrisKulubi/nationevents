@@ -96,7 +96,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/employer') && role !== 'employer' && role !== 'admin') {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
   }
-  if (pathname.startsWith('/security') && role !== 'security') {
+  if (pathname.startsWith('/security') && role !== 'security' && role !== 'admin') {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
   }
 
