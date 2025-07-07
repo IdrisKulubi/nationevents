@@ -27,7 +27,7 @@ export default async function AdminReportsPage() {
 
   // Basic role check - in a real app you'd check the database
   // For now we'll assume users with admin emails or specific roles have access
-  const isAdmin = session.user.email?.includes("admin") || session.user.role === "admin";
+  const isAdmin = session.user.role === "admin";
   
   if (!isAdmin) {
     redirect("/dashboard");
