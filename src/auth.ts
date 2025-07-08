@@ -3,19 +3,20 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import db from "@/db/drizzle";
-import { users, jobSeekers, employers } from "../db/schema";
+import { users, jobSeekers, employers } from "@/db/schema";
 import { cookies } from "next/headers";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      email: string;
-      role?: string;
-      profileCompleted?: boolean;
-      hasProfile: boolean;
-      isNewUser?: boolean;
+      role: "job_seeker" | "employer" | "admin" | "security";
+      profileCompleted: boolean;
     } & DefaultSession["user"];
+  }
+  interface User {
+    role: "job_seeker" | "employer" | "admin" | "security";
+    profileCompleted: boolean;
   }
 }
 
@@ -48,91 +49,73 @@ export const {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      console.log("[AUTH_FLOW] Redirect callback invoked.", { url, baseUrl });
-      
       // Allows relative callback URLs
-      if (url.startsWith("/")) {
-        console.log("[AUTH_FLOW] Allowing relative callback URL:", url);
-        return `${baseUrl}${url}`;
-      }
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) {
-        console.log("[AUTH_FLOW] Allowing same-origin callback URL:", url);
-        return url;
-      }
-      
-      // For all other cases, let middleware handle the routing
-      console.log("[AUTH_FLOW] Defaulting to root, middleware will handle routing.");
-      return `${baseUrl}/`;
+      if (new URL(url).origin === baseUrl) return url;
+      // Default to the dashboard, and let the middleware handle role-based redirects.
+      return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, user, trigger, account }) {
-      // On initial sign-in, check for and handle employer intent
-      if (user && account) { // This block only runs on sign-in
-        token.sub = user.id;
-        const cookieStore = await cookies();
-        const intentCookie = cookieStore.get("auth_intent");
+    async jwt({ token, user, trigger, account, session }) {
+      // If the session was updated with new data (e.g., from a form), merge it into the token
+      if (trigger === "update" && session?.profileCompleted) {
+        token.profileCompleted = session.profileCompleted;
+      }
 
+      // On initial sign-in, add user data to the token
+      if (user && account) {
+        token.sub = user.id;
+        token.role = user.role;
+        token.profileCompleted = user.profileCompleted;
+        token.name = user.name;
+        token.email = user.email;
+        token.image = user.image;
+        
+        const cookieStore = cookies();
+        const intentCookie = (await cookieStore).get("auth_intent");
         if (intentCookie?.value === "employer") {
-          console.log("JWT: Employer intent detected. Updating role.", { userId: user.id });
-          try {
-            await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id!));
-            // Clean up the cookie immediately after use
-            cookieStore.delete("auth_intent");
-          } catch (error) {
-            console.error("JWT: Failed to update user role to employer.", error);
-          }
+          await db.update(users).set({ role: "employer" }).where(eq(users.id, user.id!));
+          token.role = "employer";
+          (await cookieStore).delete("auth_intent");
         }
       }
+      
+      // When the session is explicitly updated (e.g., after profile creation),
+      // we need to refetch the user data and update the token.
+      if (trigger === "update" || !token.role) {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.sub!),
+          with: {
+            jobSeeker: true,
+            employer: true,
+          },
+        });
 
-      // This logic runs on sign-in AND on session updates.
-      // We need to ensure we have the most up-to-date user info in the token.
-      const shouldRefresh = user || trigger === "update";
-
-      if (shouldRefresh) {
-        console.log("JWT: Refreshing token data from DB.", { userId: token.sub, trigger });
-        try {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, token.sub!),
-          });
-
-          if (dbUser) {
-            token.role = dbUser.role;
-
-            // Check profile completion based on role
-            if (dbUser.role === 'employer') {
-              const employerProfile = await db.query.employers.findFirst({
-                where: eq(employers.userId, dbUser.id),
-              });
-              // An employer profile is complete if it exists and has a company name.
-              token.profileCompleted = !!(employerProfile?.id && employerProfile?.companyName);
-            } else { // 'job_seeker' or other default roles
-              const jobSeekerProfile = await db.query.jobSeekers.findFirst({
-                where: eq(jobSeekers.userId, dbUser.id),
-              });
-              // A job seeker profile is complete if it exists and has a CV.
-              token.profileCompleted = !!(jobSeekerProfile?.id && jobSeekerProfile?.cvUrl);
-            }
-             console.log("JWT: Token data refreshed.", { role: token.role, profileCompleted: token.profileCompleted });
+        if (dbUser) {
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+          token.image = dbUser.image;
+          token.role = dbUser.role;
+          if (dbUser.role === 'employer') {
+            token.profileCompleted = !!dbUser.employer;
+          } else if (dbUser.role === 'job_seeker') {
+            token.profileCompleted = !!dbUser.jobSeeker;
           } else {
-            console.warn("JWT: User not found during refresh.", { userId: token.sub });
+            token.profileCompleted = true; // Admins/Security are always considered complete
           }
-        } catch (error) {
-          console.error("JWT: Error refreshing token data.", error);
         }
       }
       
       return token;
     },
     async session({ session, token }) {
-      // The session callback is for passing data from the token to the client.
-      // It should not perform any database lookups.
       if (session.user && token.sub) {
         session.user.id = token.sub;
-        session.user.role = token.role as string | undefined;
+        session.user.role = token.role as "job_seeker" | "employer" | "admin" | "security";
         session.user.profileCompleted = token.profileCompleted as boolean;
-        
-        // Deprecating hasProfile in favor of profileCompleted for clarity, but keeping for compatibility
-        session.user.hasProfile = token.profileCompleted as boolean;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.image = token.image as string | null;
       }
       return session;
     },

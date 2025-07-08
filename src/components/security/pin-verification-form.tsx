@@ -96,17 +96,31 @@ export function PinVerificationForm({ securityId }: PinVerificationFormProps) {
   return (
     <div className="w-full max-w-3xl mx-auto p-6 bg-white space-y-6">
       <Tabs defaultValue="pin" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 h-12">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 h-12 rounded-lg">
           <TabsTrigger 
             value="pin" 
-            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm font-medium"
+            className="flex items-center gap-2 text-sm font-medium transition-colors
+              data-[state=active]:bg-green-600
+              data-[state=active]:text-white
+              data-[state=active]:shadow-sm
+              data-[state=active]:hover:bg-green-700
+              data-[state=inactive]:text-gray-800
+              data-[state=inactive]:hover:bg-gray-200
+              rounded-md"
           >
             <Key className="h-4 w-4" />
             PIN Verification
           </TabsTrigger>
           <TabsTrigger 
             value="ticket"
-            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm font-medium"
+            className="flex items-center gap-2 text-sm font-medium transition-colors
+              data-[state=active]:bg-green-600
+              data-[state=active]:text-white
+              data-[state=active]:shadow-sm
+              data-[state=active]:hover:bg-green-700
+              data-[state=inactive]:text-gray-800
+              data-[state=inactive]:hover:bg-gray-200
+              rounded-md"
           >
             <Shield className="h-4 w-4" />
             Ticket Number

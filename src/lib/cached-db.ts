@@ -8,7 +8,8 @@ import {
   interviewSlots,
   attendanceRecords,
   securityIncidents,
-  securityPersonnel
+  securityPersonnel,
+  systemLogs
 } from "@/db/schema";
 import { eq, desc, count, and, gte, lte, sql, asc } from "drizzle-orm";
 import { cacheManager, CACHE_KEYS, CACHE_TTL } from "./redis";
@@ -291,50 +292,60 @@ export async function getAllEvents(forceRefresh: boolean = false) {
   return cacheManager.getOrSet(
     CACHE_KEYS.EVENTS,
     'all',
-    async () => {
-      return await db
-        .select()
-        .from(events)
-        .orderBy(desc(events.startDate));
-    },
-    CACHE_TTL.LONG, // Events don't change frequently
+    () => db.select().from(events).orderBy(desc(events.startDate)),
+    CACHE_TTL.LONG,
     forceRefresh
   );
 }
 
 // ============================================================================
-// DASHBOARD ANALYTICS WITH CACHING
+// DASHBOARD & ANALYTICS
 // ============================================================================
 
 /**
- * Get dashboard statistics with caching
+ * Get aggregated dashboard statistics with caching.
+ * This is a high-traffic endpoint and should be aggressively cached.
  */
 export async function getDashboardStats(forceRefresh: boolean = false) {
   return cacheManager.getOrSet(
     CACHE_KEYS.DASHBOARD_STATS,
-    'main',
+    'all',
     async () => {
       const [
-        totalUsersResult,
-        newRegistrationsResult,
-        employersResult,
-        activeEventsResult,
+        totalUsers,
+        totalJobSeekers,
+        totalEmployers,
+        totalEvents,
+        totalBooths,
+        totalInterviews,
+        todaysCheckIns,
+        totalSecurityPersonnel,
+        activeIncidents
       ] = await Promise.all([
-        db.select({ count: count() }).from(users),
-        db.select({ count: count() }).from(users).where(gte(users.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))),
-        db.select({ count: count() }).from(employers).where(eq(employers.isVerified, true)),        
-        db.select({ count: count() }).from(events).where(eq(events.isActive, true)),
+        db.select({ value: count() }).from(users),
+        db.select({ value: count() }).from(jobSeekers),
+        db.select({ value: count() }).from(employers),
+        db.select({ value: count() }).from(events),
+        db.select({ value: count() }).from(booths),
+        db.select({ value: count() }).from(interviewSlots).where(eq(interviewSlots.isBooked, true)),
+        db.select({ value: count() }).from(attendanceRecords).where(gte(attendanceRecords.checkInTime, sql`now() - interval '24 hours'`)),
+        db.select({ value: count() }).from(securityPersonnel),
+        db.select({ value: count() }).from(securityIncidents).where(eq(securityIncidents.status, "open")),
       ]);
 
       return {
-        totalUsers: totalUsersResult[0]?.count || 0,
-        newRegistrations: newRegistrationsResult[0]?.count || 0,
-        employers: employersResult[0]?.count || 0,
-        activeEvents: activeEventsResult[0]?.count || 0,
-        lastUpdated: new Date().toISOString()
+        totalUsers: totalUsers[0].value,
+        totalJobSeekers: totalJobSeekers[0].value,
+        totalEmployers: totalEmployers[0].value,
+        totalEvents: totalEvents[0].value,
+        totalBooths: totalBooths[0].value,
+        totalInterviews: totalInterviews[0].value,
+        todaysCheckIns: todaysCheckIns[0].value,
+        totalSecurityPersonnel: totalSecurityPersonnel[0].value,
+        activeIncidents: activeIncidents[0].value,
       };
     },
-    CACHE_TTL.DASHBOARD,
+    CACHE_TTL.IMMEDIATE, // Cache for 60 seconds
     forceRefresh
   );
 }
@@ -372,6 +383,42 @@ export async function getAttendanceAnalytics(period: 'day' | 'week' | 'month' = 
       };
     },
     CACHE_TTL.ANALYTICS,
+    forceRefresh
+  );
+}
+
+/**
+ * Get recent system activity with caching.
+ * This is for the main admin dashboard and should be cached.
+ */
+export async function getRecentActivity(forceRefresh: boolean = false) {
+  return cacheManager.getOrSet(
+    CACHE_KEYS.RECENT_ACTIVITY,
+    'all',
+    async () => {
+      const recentLogs = await db
+        .select({
+          id: systemLogs.id,
+          action: systemLogs.action,
+          resource: systemLogs.resource,
+          details: systemLogs.details,
+          createdAt: systemLogs.createdAt,
+          userName: users.name
+        })
+        .from(systemLogs)
+        .leftJoin(users, eq(systemLogs.userId, users.id))
+        .orderBy(desc(systemLogs.createdAt))
+        .limit(10);
+
+      return recentLogs.map((log: typeof recentLogs[0]) => ({
+        action: log.action,
+        details: log.details,
+        time: log.createdAt,
+        user: log.userName || "System",
+        type: log.resource === "security" ? "warning" : "info"
+      }));
+    },
+    CACHE_TTL.IMMEDIATE, // Cache for 60 seconds
     forceRefresh
   );
 }

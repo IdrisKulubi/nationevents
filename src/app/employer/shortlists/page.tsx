@@ -252,10 +252,7 @@ export default async function EmployerShortlistsPage() {
                       <Settings className="h-4 w-4 mr-2" />
                       Manage List
                     </Button>
-                    <Button size="sm">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Contact All
-                    </Button>
+                    
                   </div>
                 </div>
               </CardHeader>
@@ -339,18 +336,8 @@ export default async function EmployerShortlistsPage() {
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm">
-                            <Mail className="h-4 w-4 mr-2" />
-                            Contact
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Schedule
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove
-                          </Button>
+                         
+                       
                         </div>
                       </div>
                     </div>

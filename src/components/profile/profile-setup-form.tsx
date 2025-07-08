@@ -210,125 +210,51 @@ export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProp
     }
   };
 
-  // Prevent any accidental form submissions on steps 1-3
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentStep < totalSteps) {
-      toast.info(`Please use the "Next Step" button to continue. You're on step ${currentStep} of ${totalSteps}.`);
-      return;
-    }
-    // Only proceed with actual submission on step 4
-    onSubmit(e as React.FormEvent<HTMLFormElement>);
-  };
-
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
-    e.preventDefault();
-    
-    // Only allow submission on step 4 (final step)
-    if (currentStep !== totalSteps) {
-      console.log(`🚫 Form submission blocked - currently on step ${currentStep}, need to be on step ${totalSteps}`);
-      return;
-    }
-
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries()) as any;
-    
-    // Get form values using watch
-    const formValues = watch();
-    
-    if (!cvUploadUrl) {
-      toast.error("Please upload your CV before submitting");
-      return;
-    }
-
-    // Check if profile already exists to prevent duplicate submissions
-    if (existingProfile?.jobSeeker?.id && existingProfile?.jobSeeker?.cvUrl) {
-      console.log("Profile already exists and is complete, redirecting to dashboard");
-      router.push("/dashboard");
-      return;
-    }
-
+  const onSubmit = async (data: ProfileFormData) => {
     setIsSubmitting(true);
-    
+    toast.info("Submitting your profile, please wait...");
+
+    if (!cvUploadUrl && !existingProfile?.jobSeeker?.cvUrl) {
+      toast.error("A CV is required to create a profile.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const skillsArray = formValues.skills?.split(",").map(skill => skill.trim()).filter(Boolean) || [];
-      
       const profileData = {
         userId: user.id!,
-        fullName: formValues.fullName,
-        phoneNumber: formValues.phoneNumber,
-        bio: formValues.bio,
-        interestCategories: selectedSectors,
-        educationLevel: formValues.educationLevel,
-        experienceLevel: formValues.experienceLevel,
-        skills: skillsArray,
-        linkedinUrl: formValues.linkedinUrl || "",
-        portfolioUrl: formValues.portfolioUrl || "",
-        expectedSalary: formValues.expectedSalary || "",
-        availableFrom: formValues.availableFrom,
-        cvUrl: cvUploadUrl,
-        cvUploadKey: cvUploadUrl,
+        ...data,
+        cvUrl: cvUploadUrl || existingProfile?.jobSeeker?.cvUrl,
         additionalDocuments: additionalDocuments,
-        jobSectors: selectedSectors,
-        isHuaweiStudent: formValues.isHuaweiStudent || false,
-        huaweiCertificationLevel: formValues.huaweiCertificationLevel || "",
-        huaweiCertificationDetails: formValues.huaweiCertificationDetails || "",
-        wantsToAttendConference: formValues.wantsToAttendConference || false,
-        conferenceSessionInterests: conferenceSessionInterests,
-        conferenceDietaryRequirements: formValues.conferenceDietaryRequirements || "",
-        conferenceAccessibilityNeeds: formValues.conferenceAccessibilityNeeds || "",
-        dataPrivacyAccepted: formValues.dataPrivacyAccepted,
-        dataPrivacyAcceptedAt: new Date(),
+        dataPrivacyAcceptedAt: data.dataPrivacyAccepted ? new Date() : undefined,
       };
 
-      // Debug: Log the data being sent
-      console.log("🔍 Frontend sending profile data:", {
-        skills: profileData.skills,
-        expectedSalary: profileData.expectedSalary,
-        skillsType: typeof profileData.skills,
-        expectedSalaryType: typeof profileData.expectedSalary,
-        hasExistingProfile: !!existingProfile?.jobSeeker?.id,
-      });
+      const result = await createJobSeekerProfile(profileData as any);
 
-      const result = await createJobSeekerProfile(profileData);
-      
       if (result.success) {
-        toast.success("Registration completed! Our team will review your application and match you with suitable companies. You'll receive notifications with your interview schedule and booth assignment details for the Nation-Huawei Leap Job Fair.");
-        
-        // Force session update to refresh JWT token with latest profile data
-        console.log("Profile creation successful, updating session and redirecting");
+        toast.success("Profile created successfully! Redirecting you to the homepage...");
         
         if (result.shouldUpdateSession) {
-          await refreshSession(); // Force session refresh
-          
-          // Small delay to ensure session is updated, then redirect
-          setTimeout(() => {
-            window.location.href = "/dashboard";
-          }, 500);
-        } else {
-          // If no session update needed, redirect immediately
-          window.location.href = "/dashboard";
+          await refreshSession();
         }
+        
+        // Redirect after a short delay to allow session to propagate
+        setTimeout(() => {
+          router.push("/");
+        }, 1000);
+
       } else {
-        toast.error(result.message || "Failed to create profile. Please try again.");
+        toast.error(result.message || "An unexpected error occurred.");
       }
     } catch (error) {
-      console.error("Profile creation error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      
-      // Handle specific error cases
-      if (errorMessage.includes("already exists")) {
-        toast.error("Profile already exists. Redirecting to dashboard...");
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1000);
-      } else {
-        toast.error("Failed to create profile. Please try again.");
-      }
+      console.error("Profile submission error:", error);
+      toast.error("Failed to submit profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleFinalSubmit = handleSubmit(onSubmit);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -938,28 +864,27 @@ export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProp
           }
         }}
       >
-     
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (currentStep < totalSteps) {
-                toast.info(`Please use the "Next Step" button to continue to step ${currentStep + 1}.`);
-              }
-            }}
-          >
-            {renderStep()}
+        <Card className="overflow-hidden shadow-lg border-2 border-slate-100 dark:border-slate-800">
+          <div className="p-2 bg-slate-50 dark:bg-slate-800/50">
+            <Progress value={progress} className="w-full" />
+          </div>
+          <form>
+            <CardContent className="p-6">
+              {renderStep()}
+            </CardContent>
           </form>
+        </Card>
 
         {/* Enhanced Navigation Buttons */}
-        <div className="flex justify-between items-center pt-8">
+        <div className="flex justify-between items-center p-6 bg-slate-50 dark:bg-slate-800/50">
           <Button
             type="button"
             variant="outline"
             onClick={prevStep}
-            disabled={currentStep === 1}
-            className="px-8 py-3 h-12 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={currentStep === 1 || isSubmitting}
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft size={16} />
             Previous
           </Button>
 
@@ -967,48 +892,21 @@ export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProp
             <Button
               type="button"
               onClick={nextStep}
-              className="px-8 py-3 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              disabled={isSubmitting}
+              className="flex items-center gap-2"
             >
-              Next Step
-              <ArrowRight className="w-4 h-4 ml-2" />
+              Next Step <ArrowRight size={16} />
             </Button>
           ) : (
-            <div className="space-y-2">
-              <form onSubmit={handleFormSubmit}>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !cvUploadUrl || !dataPrivacyAccepted}
-                  className="px-8 py-3 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creating Profile...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      Complete Profile
-                    </>
-                  )}
-                </Button>
-              </form>
-              
-              {/* Helper text for disabled button */}
-              {(!cvUploadUrl || !dataPrivacyAccepted) && !isSubmitting && (
-                <div className="text-center">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center justify-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    {!cvUploadUrl && !dataPrivacyAccepted 
-                      ? "Please upload your CV and accept the data privacy policy to continue"
-                      : !cvUploadUrl 
-                      ? "Please upload your CV to continue"
-                      : "Please accept the data privacy policy to continue"
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
+            <Button
+              type="button"
+              onClick={handleFinalSubmit}
+              disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <CheckCircle size={16} />
+              {isSubmitting ? "Submitting..." : "Complete Profile"}
+            </Button>
           )}
         </div>
       </div>

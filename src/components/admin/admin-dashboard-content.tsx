@@ -75,7 +75,7 @@ export function AdminDashboardContent({ user }: AdminDashboardContentProps) {
         getRecentActivity()
       ]);
       
-      setStats(statsData);
+      setStats(statsData as any);
       setRecentActivity(activityData);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
