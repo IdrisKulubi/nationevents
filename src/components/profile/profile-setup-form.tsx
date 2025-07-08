@@ -186,6 +186,20 @@ export function ProfileSetupForm({ user, existingProfile }: ProfileSetupFormProp
     }
     
     const isValid = await trigger(fieldsToValidate);
+
+    if (!isValid) {
+      // Find the relevant errors for the current step
+      const stepErrors = Object.keys(errors)
+        .filter(key => fieldsToValidate.includes(key as keyof ProfileFormData))
+        .map(key => (errors as any)[key].message);
+
+      // Show a toast for each error
+      if (stepErrors.length > 0) {
+        toast.error(stepErrors.join('. '), {
+          description: "Please fix the issues before proceeding.",
+        });
+      }
+    }
     
     // Additional validation for step 3 - ensure CV is uploaded
     if (currentStep === 3 && !cvUploadUrl) {
