@@ -75,6 +75,14 @@ export function ViewJobSeekerModal({
 
   const { user, jobSeeker } = jobSeekerData;
 
+  const skillsArray = jobSeeker?.skills
+    ? (Array.isArray(jobSeeker.skills)
+      ? jobSeeker.skills
+      : typeof jobSeeker.skills === 'string'
+      ? (jobSeeker.skills as string).split(',').map(s => s.trim())
+      : [])
+    : [];
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved": return "bg-green-100 text-green-800";
@@ -256,9 +264,9 @@ export function ViewJobSeekerModal({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {jobSeeker?.skills && jobSeeker.skills.length > 0 ? (
+                {skillsArray && skillsArray.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {jobSeeker.skills.map((skill, idx) => (
+                    {skillsArray.map((skill, idx) => (
                       <Badge key={idx} variant="outline" className="text-sm">
                         {skill}
                       </Badge>
