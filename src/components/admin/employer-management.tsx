@@ -57,6 +57,8 @@ import {
   Star,
   AlertTriangle,
   Loader2,
+  ShieldCheck,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -65,6 +67,19 @@ import {
   verifyEmployer, 
   rejectEmployer 
 } from "@/lib/actions/admin-actions";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { verifyAllPendingEmployers } from "@/lib/actions/admin-bulk-actions";
 
 interface Employer {
   id: string;
@@ -95,6 +110,8 @@ export function EmployerManagement() {
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const router = useRouter();
 
   const loadEmployers = useCallback(async () => {
     try {
@@ -206,6 +223,23 @@ export function EmployerManagement() {
       enterprise: "Enterprise (1000+)",
     };
     return sizes[size as keyof typeof sizes] || size;
+  };
+
+  const unverifiedCount = employers.filter(e => !e.isVerified).length;
+
+  const handleBulkVerify = async () => {
+    setBulkLoading(true);
+    const promise = verifyAllPendingEmployers();
+    
+    toast.promise(promise, {
+      loading: 'Verifying all pending employers...',
+      success: (data) => {
+        router.refresh();
+        return data.message;
+      },
+      error: (err) => (err as Error).message || 'An unexpected error occurred.',
+      finally: () => setBulkLoading(false),
+    });
   };
 
   if (loading) {
@@ -621,6 +655,50 @@ export function EmployerManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Employer Management</h1>
+          <p className="text-gray-600 mt-2">
+            Manage and verify registered employers.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export Data
+          </Button>
+          
+          {unverifiedCount > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="border-blue-400 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                  disabled={bulkLoading}
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  {bulkLoading ? 'Verifying...' : `Verify All Unverified (${unverifiedCount})`}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will verify all {unverifiedCount} pending employers. They will be granted full access. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkVerify} className="bg-blue-500 hover:bg-blue-600">
+                    Yes, Verify All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

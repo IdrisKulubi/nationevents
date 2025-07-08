@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
       return new NextResponse("File parameter is required", { status: 400 });
     }
 
-    // Security check: Verify the file belongs to the current user
-    if (!fileKey.includes(session.user.id)) {
+    const userRole = session.user.role;
+
+    // Enhanced security check with role-based access
+    if (userRole !== "admin" && userRole !== "employer" && !fileKey.includes(session.user.id)) {
       return new NextResponse("Unauthorized to access this file", { status: 403 });
     }
 

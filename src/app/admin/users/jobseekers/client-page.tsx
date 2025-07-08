@@ -51,6 +51,18 @@ import { ViewJobSeekerModal } from "@/components/admin/view-job-seeker-modal";
 import { openCvInNewTab } from "@/lib/s3-utils";
 import { toast } from "sonner";
 import Image from "next/image";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { approveAllPendingJobSeekers } from "@/lib/actions/admin-bulk-actions";
 
 interface JobSeekersClientPageProps {
   initialData: {
@@ -157,6 +169,26 @@ export function JobSeekersClientPage({ initialData }: JobSeekersClientPageProps)
     }
   };
 
+  const handleBulkApprove = async () => {
+    setLoading('bulk-approve');
+    const promise = approveAllPendingJobSeekers();
+    
+    toast.promise(promise, {
+      loading: 'Approving all pending job seekers...',
+      success: (data) => {
+        router.refresh(); // Refresh data on the page
+        return data.message;
+      },
+      error: (err) => {
+        // The action itself handles the error and returns a message
+        return (err as Error).message || 'An unexpected error occurred.';
+      },
+      finally: () => {
+        setLoading(null);
+      }
+    });
+  };
+
   const handleApprove = async (jobSeekerId: string) => {
     setLoading(jobSeekerId);
     try {
@@ -226,6 +258,36 @@ export function JobSeekersClientPage({ initialData }: JobSeekersClientPageProps)
             <Download className="h-4 w-4 mr-2" />
             Export Data
           </Button>
+          
+          {pendingCount > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="border-yellow-400 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                  disabled={loading === 'bulk-approve'}
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  {loading === 'bulk-approve' ? 'Approving...' : `Approve All Pending (${pendingCount})`}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will approve all {pendingCount} pending job seeker registrations. They will be notified and granted access. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBulkApprove} className="bg-yellow-500 hover:bg-yellow-600">
+                    Yes, Approve All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
           <JobSeekerModal 
             trigger={
               <Button className="bg-green-600 hover:bg-green-700">

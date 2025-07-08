@@ -20,19 +20,20 @@ const DASHBOARD_ROUTES = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static assets and internal Next.js paths
-  if (pathname.startsWith('/_next') || pathname.includes('.')) {
-    return NextResponse.next();
+  // Handle trailing slashes by redirecting to a clean URL
+  if (pathname.endsWith('/') && pathname.length > 1) {
+    const newPath = pathname.slice(0, -1);
+    return NextResponse.redirect(new URL(newPath, request.url));
   }
 
-  // Allow all public routes
-  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
+  // Skip middleware for public routes and static assets
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
   const session = await auth();
 
-  // If no session, redirect to login page
+  // If no session, redirect to login page for all protected routes
   if (!session?.user?.id) {
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
@@ -42,18 +43,24 @@ export async function middleware(request: NextRequest) {
   }
 
   const { user } = session;
+  const userDashboard = DASHBOARD_ROUTES[user.role] || '/';
 
-  // Role-based access control
+  // Centralized, simple role-based routing.
+  // If a user is on a page that doesn't match their role, send them to their dashboard.
   if (pathname.startsWith('/admin') && user.role !== 'admin') {
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
-  }
-  if (pathname.startsWith('/security') && user.role !== 'security' && user.role !== 'admin') {
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
+    return NextResponse.redirect(new URL(userDashboard, request.url));
   }
   if (pathname.startsWith('/employer') && user.role !== 'employer' && user.role !== 'admin') {
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.job_seeker, request.url));
+    return NextResponse.redirect(new URL(userDashboard, request.url));
+  }
+  if (pathname.startsWith('/dashboard') && user.role !== 'job_seeker') {
+    return NextResponse.redirect(new URL(userDashboard, request.url));
+  }
+  if (pathname.startsWith('/security') && user.role !== 'security' && user.role !== 'admin') {
+    return NextResponse.redirect(new URL(userDashboard, request.url));
   }
   
+  // Let page components handle more complex logic like profile completion.
   return NextResponse.next();
 }
 
@@ -61,11 +68,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes, but we handle /api/auth explicitly)
+     * - api/auth (NextAuth routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
+     * - _ipx (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|_next/static|_next/image|_ipx|favicon.ico).*)',
   ],
 };

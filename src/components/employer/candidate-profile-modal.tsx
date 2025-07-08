@@ -178,7 +178,7 @@ export function CandidateProfileModal({
                 <CardTitle className="text-lg">About</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{candidate.jobSeeker.bio}</p>
+                <p className="text-slate-600 dark:text-slate-400">{candidate.jobSeeker.bio}</p>
               </CardContent>
             </Card>
           )}
@@ -280,35 +280,34 @@ export function CandidateProfileModal({
           <Separator />
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleContact} className="flex-1 sm:flex-none">
-              <Mail className="h-4 w-4 mr-2" />
-              Contact
-            </Button>
-            
+          <div className="flex flex-col sm:flex-row gap-4 mt-6">
             {candidate.jobSeeker.cvUrl && (
-              <Button variant="outline" onClick={handleDownloadCV} className="flex-1 sm:flex-none">
-                <Download className="h-4 w-4 mr-2" />
-                Download CV
+              <Button
+                onClick={() =>
+                  window.open(
+                    `/api/view-cv?file=${encodeURIComponent(candidate.jobSeeker.cvUrl as string)}`,
+                    '_blank'
+                  )
+                }
+                variant="outline"
+                className="flex-1 flex items-center justify-center gap-2 border-blue-500 text-blue-700 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-200 dark:hover:bg-blue-900/20 font-semibold shadow-sm transition"
+              >
+                <Download className="h-4 w-4" />
+                View CV
               </Button>
             )}
-            
+
             {!candidate.isShortlisted && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="default"
                 onClick={handleShortlist}
                 disabled={loading}
-                className="flex-1 sm:flex-none"
+                className="flex-1 flex items-center justify-center gap-2 bg-pink-600 hover:bg-pink-700 text-white font-semibold shadow-sm transition"
               >
-                <Heart className="h-4 w-4 mr-2" />
+                <Heart className="h-4 w-4" />
                 {loading ? "Adding..." : "Shortlist"}
               </Button>
             )}
-            
-            <Button variant="outline" className="flex-1 sm:flex-none">
-              <Calendar className="h-4 w-4 mr-2" />
-              Schedule Interview
-            </Button>
           </div>
         </div>
       </DialogContent>

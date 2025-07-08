@@ -6,16 +6,13 @@ import { AdminDashboardContent } from "@/components/admin/admin-dashboard-conten
 export default async function AdminDashboardPage() {
   const session = await auth();
   
+  // The middleware now guarantees that a session exists and the user is an admin.
   if (!session?.user) {
+    // This redirect is a fallback, but should not be reached in normal operation.
     redirect("/login");
   }
 
   const userProfile = await getUserProfile(session.user.id!);
   
-  // Check if user has admin role
-  if (userProfile?.role !== "admin") {
-    redirect("/dashboard");
-  }
-
   return <AdminDashboardContent user={userProfile} />;
 } 
