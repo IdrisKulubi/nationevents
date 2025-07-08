@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
   '/',
   '/login',
   '/api/auth', // Auth.js routes
+  '/security', // Security page is now public
   '/sentry-example-api',
   '/sentry-example-page',
 ];
@@ -56,9 +57,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/dashboard') && user.role !== 'job_seeker') {
     return NextResponse.redirect(new URL(userDashboard, request.url));
   }
-  if (pathname.startsWith('/security') && user.role !== 'security' && user.role !== 'admin') {
-    return NextResponse.redirect(new URL(userDashboard, request.url));
-  }
+  // The /security route is now public and does not require a role check.
   
   // Let page components handle more complex logic like profile completion.
   return NextResponse.next();
