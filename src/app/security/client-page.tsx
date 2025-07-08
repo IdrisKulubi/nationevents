@@ -13,7 +13,7 @@ export function SecurityDashboardClient() {
         <CardHeader className="text-center">
           <ShieldCheck className="w-12 h-12 mx-auto text-blue-600" />
           <CardTitle className="text-2xl font-bold mt-4">Attendee Verification</CardTitle>
-          <CardDescription>Enter the attendee's PIN or ticket number to verify.</CardDescription>
+          <CardDescription>Enter the attendee&apos;s PIN or ticket number to verify.</CardDescription>
         </CardHeader>
         <CardContent className="p-6">
           <PinVerificationForm securityId={GENERIC_SECURITY_ID} />
