@@ -25,7 +25,9 @@ async function validateSecurityId(securityId: string): Promise<string | null> {
     .limit(1);
 
   if (securityExists.length === 0) {
-    throw new Error(`Invalid security personnel ID: ${securityId}`);
+    // If security ID is invalid, log it and proceed without assigning a verifier.
+    console.warn(`Invalid security personnel ID provided: ${securityId}. Proceeding with null verifier.`);
+    return null;
   }
 
   return securityId;
