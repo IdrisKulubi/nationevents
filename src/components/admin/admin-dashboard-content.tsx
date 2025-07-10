@@ -23,6 +23,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { getDashboardStats, getRecentActivity } from "@/lib/actions/admin-actions";
+import { generateEventReport } from "@/lib/actions/report-actions";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -48,6 +49,7 @@ interface RecentActivity {
 
 export function AdminDashboardContent({ user }: AdminDashboardContentProps) {
   const [refreshing, setRefreshing] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -94,6 +96,43 @@ export function AdminDashboardContent({ user }: AdminDashboardContentProps) {
       toast.error("Failed to refresh dashboard");
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    toast.info("Generating your report... This may take a moment.");
+
+    try {
+      const result = await generateEventReport();
+
+      if (result.success && result.file) {
+        const byteCharacters = atob(result.file);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        });
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "event-report.docx";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast.success("Report generated successfully!");
+      } else {
+        throw new Error(result.error || "An unknown error occurred.");
+      }
+    } catch (error: any) {
+      console.error("Failed to generate report:", error);
+      toast.error(`Failed to generate report: ${error.message}`);
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -244,9 +283,9 @@ export function AdminDashboardContent({ user }: AdminDashboardContentProps) {
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Export Report
+          <Button variant="outline" onClick={handleGenerateReport} disabled={isGeneratingReport} className="flex items-center gap-2">
+            <Download className={`w-4 h-4 ${isGeneratingReport ? 'animate-spin' : ''}`} />
+            {isGeneratingReport ? "Generating..." : "Export Report"}
           </Button>
         </div>
       </div>
