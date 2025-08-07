@@ -734,3 +734,6 @@ export const notificationRecipients = pgTable(
     smsStatusIdx: index("notification_recipient_sms_status_idx").on(table.smsStatus),
   })
 );
+
+// Import Nxt Her Summit schema
+export * from './nxt-her-schema';

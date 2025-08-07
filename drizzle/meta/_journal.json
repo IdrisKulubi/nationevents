@@ -29,6 +29,13 @@
       "when": 1751915698428,
       "tag": "0003_chunky_plazm",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754596762068,
+      "tag": "0004_nxt_her_summit_schema",
+      "breakpoints": true
     }
   ]
 }

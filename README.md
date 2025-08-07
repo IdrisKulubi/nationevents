@@ -147,5 +147,4 @@ AWS_S3_PUBLIC_URL=https://your-bucket-name.s3.amazonaws.com
 NEXT_PUBLIC_S3_PUBLIC_URL=https://your-bucket-name.s3.amazonaws.com
 ```
 
-### **SMS Service (SASA SEMA)**
 ```
