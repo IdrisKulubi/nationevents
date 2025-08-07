@@ -119,9 +119,11 @@ export default async function NxtHerDashboardPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">No recent forum activity.</p>
                 )}
-                <Button className="w-full mt-4" variant="outline">
-                  Join Discussions
-                </Button>
+                <Link href="/nxt-her/forums">
+                  <Button className="w-full mt-4" variant="outline">
+                    Join Discussions
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
@@ -223,9 +225,11 @@ export default async function NxtHerDashboardPage() {
                 <Button className="w-full" variant="outline">
                   Find Attendees
                 </Button>
-                <Button className="w-full" variant="outline">
-                  Join Forums
-                </Button>
+                <Link href="/nxt-her/forums">
+                  <Button className="w-full" variant="outline">
+                    Join Forums
+                  </Button>
+                </Link>
                 <LogoutButton className="w-full" variant="outline">
                   Logout
                 </LogoutButton>
