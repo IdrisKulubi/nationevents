@@ -2,20 +2,18 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 import { Step1Form, type Step1FormData } from "./step-1-form"
 import { Step2Form, type Step2FormData } from "./step-2-form"
 import { Progress } from "@/components/ui/progress"
 
 type RegistrationData = Step1FormData & Step2FormData & { profilePhoto?: File }
 
-interface RegistrationFlowProps {
-  onComplete?: (data: RegistrationData) => void
-}
-
-export function RegistrationFlow({ onComplete }: RegistrationFlowProps) {
+export function RegistrationFlow() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<RegistrationData>>({})
+  const router = useRouter()
 
   const handleStep1Next = (data: Step1FormData & { profilePhoto?: File }) => {
     setFormData(prev => ({ ...prev, ...data }))
@@ -70,9 +68,8 @@ export function RegistrationFlow({ onComplete }: RegistrationFlowProps) {
 
       toast.success("Registration completed successfully! Please check your email for confirmation.")
       
-      if (onComplete) {
-        onComplete(completeData)
-      }
+      // Redirect to success page
+      router.push("/nxt-her/registration-success")
       
     } catch (error) {
       console.error("Registration error:", error)

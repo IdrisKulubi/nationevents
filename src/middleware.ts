@@ -9,6 +9,10 @@ const PUBLIC_ROUTES = [
   '/security', // Security page is now public
   '/sentry-example-api',
   '/sentry-example-page',
+  '/nxt-her/login',
+  '/nxt-her/register',
+  '/nxt-her/registration-success',
+  '/nxt-her/debug', // Debug page for testing
 ];
 
 const DASHBOARD_ROUTES = {
@@ -16,6 +20,7 @@ const DASHBOARD_ROUTES = {
   employer: '/employer',
   admin: '/admin',
   security: '/security',
+  nxt_her_attendee: '/nxt-her/dashboard',
 };
 
 export async function middleware(request: NextRequest) {
@@ -34,8 +39,18 @@ export async function middleware(request: NextRequest) {
 
   const session = await auth();
 
-  // If no session, redirect to login page for all protected routes
+  // If no session, redirect to appropriate login page for protected routes
   if (!session?.user?.id) {
+    // For Nxt Her Summit routes, redirect to Nxt Her login
+    if (pathname.startsWith('/nxt-her/')) {
+      const loginUrl = new URL('/nxt-her/login', request.url);
+      if (pathname !== '/nxt-her/') {
+        loginUrl.searchParams.set('callbackUrl', pathname);
+      }
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // For other routes, redirect to main login
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
       loginUrl.searchParams.set('callbackUrl', pathname);
@@ -55,6 +70,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(userDashboard, request.url));
   }
   if (pathname.startsWith('/dashboard') && user.role !== 'job_seeker') {
+    return NextResponse.redirect(new URL(userDashboard, request.url));
+  }
+  if (pathname.startsWith('/nxt-her/') && user.role !== 'nxt_her_attendee') {
     return NextResponse.redirect(new URL(userDashboard, request.url));
   }
   // The /security route is now public and does not require a role check.

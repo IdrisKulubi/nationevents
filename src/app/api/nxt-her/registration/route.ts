@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { nanoid } from "nanoid"
-import bcrypt from "bcryptjs"
-import { db } from "@/db/drizzle"
+import db from "@/db/drizzle"
 import { nxtHerAttendees, nxtHerEvents } from "@/db/nxt-her-schema"
 import { eq } from "drizzle-orm"
-import { sendRegistrationConfirmationEmail } from "@/lib/services/nxt-her-email"
 
 const registrationSchema = z.object({
   // Step 1 fields
@@ -78,9 +76,7 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to create or retrieve event")
     }
     
-    // Generate a temporary password (attendees will set their own later)
-    const tempPassword = nanoid(12)
-    const passwordHash = await bcrypt.hash(tempPassword, 12)
+    // No password needed since we're using Google OAuth
     
     // Create the attendee record
     const attendeeId = nanoid()
@@ -105,29 +101,16 @@ export async function POST(request: NextRequest) {
       termsAccepted: validatedData.termsAccepted,
       infoSharingConsent: validatedData.infoSharingConsent,
       termsAcceptedAt: new Date(),
-      registrationStatus: "pending",
+      registrationStatus: "approved", // Auto-approve since using Google OAuth
       registrationCompletedAt: new Date(),
-      passwordHash,
     })
     
-    // Send confirmation email
-    try {
-      await sendRegistrationConfirmationEmail({
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        email: validatedData.email,
-        attendanceType: validatedData.attendanceType,
-        registrationId: attendeeId,
-      })
-    } catch (emailError) {
-      console.error("Failed to send confirmation email:", emailError)
-      // Don't fail the registration if email fails
-    }
+    // Email confirmation can be added later if needed
     
     return NextResponse.json({
-      message: "Registration completed successfully",
+      message: "Registration completed successfully! You can now sign in with Google.",
       attendeeId,
-      status: "pending",
+      status: "approved",
     })
     
   } catch (error) {
