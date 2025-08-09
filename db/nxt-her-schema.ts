@@ -11,8 +11,48 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { type AdapterAccount } from "next-auth/adapters";
+import { accounts, employers, jobSeekers } from "./schema";
 
 // Nxt Her Summit Event Table
+
+
+export const users = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    role: text("role").$type<"job_seeker" | "employer" | "admin" | "security">().default("job_seeker"),
+    emailVerified: timestamp("emailVerified"),
+    image: text("image"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    lastActive: timestamp("last_active").defaultNow().notNull(),
+    isOnline: boolean("is_online").default(false),
+    profilePhoto: text("profile_photo"),
+    phoneNumber: text("phone_number"),
+    isActive: boolean("is_active").default(true),
+    passwordHash: text("password_hash"), // For credential login
+  },
+  (table) => ({
+    emailIdx: index("user_email_idx").on(table.email),
+    roleIdx: index("user_role_idx").on(table.role),
+    createdAtIdx: index("user_created_at_idx").on(table.createdAt),
+    lastActiveIdx: index("user_last_active_idx").on(table.lastActive),
+  })
+);
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+	accounts: many(accounts),
+	jobSeeker: one(jobSeekers, {
+		fields: [users.id],
+		references: [jobSeekers.userId],
+	}),
+  employer: one(employers, {
+    fields: [users.id],
+    references: [employers.userId],
+  }),
+}));
 export const nxtHerEvents = pgTable(
   "nxt_her_event",
   {

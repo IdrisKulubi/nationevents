@@ -11,6 +11,7 @@ export default defineConfig({
   out: "./drizzle",
   dbCredentials: {
     url: process.env.POSTGRES_URL!,
+    ssl: false, // Disable SSL verification for now
   },
   // Note: For AWS RDS migrations, you may need to run with:
   // $env:NODE_TLS_REJECT_UNAUTHORIZED="0"; pnpm drizzle-kit migrate
